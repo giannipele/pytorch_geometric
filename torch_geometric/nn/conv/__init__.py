@@ -24,6 +24,7 @@ from .x_conv import XConv
 from .ppf_conv import PPFConv
 from .feast_conv import FeaStConv
 from .hypergraph_conv import HypergraphConv
+from .sage_laf import SAGELafConv
 
 __all__ = [
     'MessagePassing',
