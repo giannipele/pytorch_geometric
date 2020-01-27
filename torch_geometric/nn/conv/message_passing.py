@@ -52,7 +52,7 @@ class MessagePassing(torch.nn.Module):
         super(MessagePassing, self).__init__()
 
         self.aggr = aggr
-        assert self.aggr in ['add', 'mean', 'max']
+        assert self.aggr in ['add', 'mean', 'max', 'laf']
 
         self.flow = flow
         assert self.flow in ['source_to_target', 'target_to_source']
