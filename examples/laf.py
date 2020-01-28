@@ -3,7 +3,8 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
-from torch_geometric.nn import SplineConv, SAGELafConv
+#from torch_geometric.nn import SAGELafConv
+from torch_geometric.nn import SAGEConv
 import sys
 import pdb
 import traceback
@@ -21,10 +22,15 @@ from colorama import Fore, Back, Style
 
 
 class SAGENet(torch.nn.Module):
-    def __init__(self, dataset):
+    def __init__(self, dataset, **kwargs):
+        seed = 42
+        if 'seed' in kwargs.keys():
+            seed = kwargs['seed']
         super(SAGENet, self).__init__()
-        self.conv1 = SAGELafConv(dataset.num_features, 16)
-        self.conv2 = SAGELafConv(16, dataset.num_classes)
+        #self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed)
+        #self.conv2 = SAGELafConv(16, dataset.num_classes, seed=2*seed)
+        self.conv1 = SAGEConv(dataset.num_features, 16)
+        self.conv2 = SAGEConv(16, dataset.num_classes)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -32,6 +38,8 @@ class SAGENet(torch.nn.Module):
         x = F.dropout(x, training=self.training)
         x = self.conv2(x, edge_index)
         return F.log_softmax(x, dim=1)
+
+
 EPOCH = 500
 
 
@@ -55,6 +63,7 @@ def validate(model, data):
         accs.append(acc)
     return accs
 
+
 def test(model, data):
     model.eval()
     logits, accs = model(data), []
@@ -63,6 +72,7 @@ def test(model, data):
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
         accs.append(acc)
     return accs
+
 
 def main(exp_name):
     torch.manual_seed(42)
@@ -110,12 +120,15 @@ def main(exp_name):
             print('Test Accuracy: {}'.format(accs[1]))
             flog.write('Test Accuracy: {}\n'.format(accs[1]))
 
+
 class GuruMeditation (torch.autograd.detect_anomaly):
     def __init__(self):
         super(GuruMeditation, self).__init__()
+
     def __enter__(self):
         super(GuruMeditation, self).__enter__()
         return self
+
     def __exit__(self, type, value, trace):
         super(GuruMeditation, self).__exit__()
         if isinstance(value, RuntimeError):
