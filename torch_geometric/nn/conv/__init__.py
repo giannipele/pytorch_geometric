@@ -2,6 +2,7 @@ from .message_passing import MessagePassing
 from .gcn_conv import GCNConv
 from .cheb_conv import ChebConv
 from .sage_conv import SAGEConv
+from .sage_conv import SAGELafConv
 from .graph_conv import GraphConv
 from .gated_graph_conv import GatedGraphConv
 from .gat_conv import GATConv
@@ -24,13 +25,14 @@ from .x_conv import XConv
 from .ppf_conv import PPFConv
 from .feast_conv import FeaStConv
 from .hypergraph_conv import HypergraphConv
-from .sage_laf import SAGELafConv
+
 
 __all__ = [
     'MessagePassing',
     'GCNConv',
     'ChebConv',
     'SAGEConv',
+    'SAGELafConv',
     'GraphConv',
     'GatedGraphConv',
     'GATConv',

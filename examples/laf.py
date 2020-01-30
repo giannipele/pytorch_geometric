@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
 #from torch_geometric.nn import SAGELafConv
-from torch_geometric.nn import SAGEConv
+from torch_geometric.nn import SAGEConv, SAGELafConv
 import sys
 import pdb
 import traceback
@@ -22,15 +22,16 @@ from colorama import Fore, Back, Style
 
 
 class SAGENet(torch.nn.Module):
+
     def __init__(self, dataset, **kwargs):
         seed = 42
         if 'seed' in kwargs.keys():
             seed = kwargs['seed']
         super(SAGENet, self).__init__()
-        #self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed)
-        #self.conv2 = SAGELafConv(16, dataset.num_classes, seed=2*seed)
-        self.conv1 = SAGEConv(dataset.num_features, 16)
-        self.conv2 = SAGEConv(16, dataset.num_classes)
+        self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed)
+        self.conv2 = SAGELafConv(16, dataset.num_classes, seed=2*seed)
+        #self.conv1 = SAGEConv(dataset.num_features, 16)
+        #self.conv2 = SAGEConv(16, dataset.num_classes)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
