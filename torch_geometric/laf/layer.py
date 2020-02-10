@@ -78,39 +78,41 @@ class ElementAggregationLayer(LAFLayer):
 
     def forward(self, data, **kwargs):
         if 'max' in kwargs.keys():
-            self.max = kwargs['max']
+            max = kwargs['max']
+        else:
+            max = self.max
         eps = 1e-6
         sup = 1e6
 
         data_1 = torch.clamp(data.clone(), eps, sup)
-        data_2 = torch.clamp(self.max - data.clone(), eps, sup)
+        data_2 = torch.clamp(max - data.clone(), eps, sup)
         data_3 = torch.clamp(data.clone(), eps, sup)
-        data_4 = torch.clamp(self.max - data.clone(), eps, sup)
+        data_4 = torch.clamp(max - data.clone(), eps, sup)
 
-        exp_1 = torch.pow(data_1,self.weights[1])
-        exp_2 = torch.pow(data_2,self.weights[3])
-        exp_3 = torch.pow(data_3,self.weights[5])
-        exp_4 = torch.pow(data_4,self.weights[7])
+        exp_1 = torch.pow(data_1, self.weights[1])
+        exp_2 = torch.pow(data_2, self.weights[3])
+        exp_3 = torch.pow(data_3, self.weights[5])
+        exp_4 = torch.pow(data_4, self.weights[7])
 
-        sum_1 = torch.clamp(torch.sum(exp_1,dim=0), eps, sup)
-        sum_2 = torch.clamp(torch.sum(exp_2,dim=0), eps, sup)
-        sum_3 = torch.clamp(torch.sum(exp_3,dim=0), eps, sup)
-        sum_4 = torch.clamp(torch.sum(exp_4,dim=0), eps, sup)
+        sum_1 = torch.clamp(torch.sum(exp_1, dim=0), eps, sup)
+        sum_2 = torch.clamp(torch.sum(exp_2, dim=0), eps, sup)
+        sum_3 = torch.clamp(torch.sum(exp_3, dim=0), eps, sup)
+        sum_4 = torch.clamp(torch.sum(exp_4, dim=0), eps, sup)
 
-        sqrt_1 = torch.pow(sum_1,self.weights[0])
-        sqrt_2 = torch.pow(sum_2,self.weights[2])
-        sqrt_3 = torch.pow(sum_3,self.weights[4])
-        sqrt_4 = torch.pow(sum_4,self.weights[6])
+        sqrt_1 = torch.pow(sum_1, self.weights[0])
+        sqrt_2 = torch.pow(sum_2, self.weights[2])
+        sqrt_3 = torch.pow(sum_3, self.weights[4])
+        sqrt_4 = torch.pow(sum_4, self.weights[6])
 
-        term_1 = sqrt_1*self.weights[8]
-        term_2 = (self.max - sqrt_2)*self.weights[9]
-        term_3 = sqrt_3*self.weights[10]
-        term_4 = (self.max - sqrt_4)*self.weights[11]
+        term_1 = sqrt_1 * self.weights[8]
+        term_2 = (max - sqrt_2) * self.weights[9]
+        term_3 = sqrt_3 * self.weights[10]
+        term_4 = (max - sqrt_4) * self.weights[11]
 
         num = term_1 + term_2
         den = torch.clamp(term_3 + term_4 + self.weights[12], eps, sup)
 
-        res = num/den
+        res = num / den
 
         return res
 

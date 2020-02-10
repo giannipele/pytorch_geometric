@@ -1,9 +1,9 @@
 import torch
-import torch.nn.functional as F
+from torch.nn import functional as F
 from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.utils import add_remaining_self_loops
-from torch_geometric.utils import scatter_
+#from torch_geometric.utils import scatter_
 from laf.layer import ElementAggregationLayer
 from torch_scatter.utils.gen import gen
 import lhsmdu
@@ -36,6 +36,11 @@ class SAGELafConv(MessagePassing):
     def __init__(self, in_channels, out_channels, normalize=False, bias=True,
                  **kwargs):
         aggr = 'laf'
+        seed = 42
+        if 'aggr' in kwargs.keys():
+            aggr = kwargs['aggr']
+        if 'seed' in kwargs.keys():
+            seed = kwargs['seed']
         super(SAGELafConv, self).__init__(aggr=aggr, **kwargs)
 
         self.in_channels = in_channels
@@ -50,7 +55,7 @@ class SAGELafConv(MessagePassing):
 
         self.reset_parameters()
         self.sigmoid = torch.sigmoid
-        params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=92))
+        params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
         #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]] * out_channels)
         #params = par.t()
         self.aggregation = ElementAggregationLayer(parameters=params)
@@ -94,8 +99,8 @@ class SAGELafConv(MessagePassing):
         """
         if self.aggr == 'laf':
             return self._laf_aggregate(src=inputs, index=index, dim=self.node_dim, dim_size=dim_size)
-        else:
-            return scatter_(self.aggr, inputs, index, self.node_dim, dim_size)
+        #else:
+        #    return scatter_(self.aggr, inputs, index, self.node_dim, dim_size)
 
     def _laf_aggregate(self, src, index, dim=-1, out=None, dim_size=None, fill_value=0):
         src, out, index, dim = gen(src, index, dim, out, dim_size, fill_value)
@@ -108,8 +113,11 @@ class SAGELafConv(MessagePassing):
 
         to_aggregate = self._get_vectors_to_aggregate(src, ids)
         for k, v in to_aggregate.items():
-            data = self.sigmoid(v)
-            out[k] = self.aggregation(data)
+            v_min = torch.min(v)
+            v_max = torch.max(v)
+            data = (v - v_min)/(v_max - v_min)
+            #data = self.sigmoid(v)
+            out[k] = self.aggregation(data, max=torch.max(data))
         return out
 
     def _get_vectors_to_aggregate(self, src, ids):

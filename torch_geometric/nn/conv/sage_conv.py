@@ -106,7 +106,7 @@ class SAGELafConv(MessagePassing):
             self.register_parameter('bias', None)
 
         self.reset_parameters()
-        self.sigmoid = torch.sigmoid
+        #self.sigmoid = torch.sigmoid
         params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
         #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]] * out_channels)
         #params = par.t()
@@ -168,7 +168,7 @@ class SAGELafConv(MessagePassing):
             v_max = torch.max(v)
             data = (v - v_min)/(v_max - v_min)
             #data = self.sigmoid(v)
-            out[k] = self.aggregation(data)
+            out[k] = self.aggregation(data, max=torch.max(data)+1e-08)
         return out
 
     def _get_vectors_to_aggregate(self, src, ids):

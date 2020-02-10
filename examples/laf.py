@@ -81,7 +81,7 @@ def main(exp_name):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'data', dataset)
     dataset = Planetoid(path, dataset, T.NormalizeFeatures())
     data = dataset[0]
-    print(data) 
+    #print(data)
     data.train_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
     data.train_mask[:data.num_nodes - 1000] = 1
 
@@ -90,6 +90,7 @@ def main(exp_name):
 
     data.test_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
     data.test_mask[data.num_nodes - 500:] = 1
+
 
     print('Train: {}'.format(torch.sum(data.train_mask)))
     print('Validation: {}'.format(torch.sum(data.val_mask)))
