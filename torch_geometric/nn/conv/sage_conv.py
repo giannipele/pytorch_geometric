@@ -107,11 +107,11 @@ class SAGELafConv(MessagePassing):
 
         self.reset_parameters()
         #self.sigmoid = torch.sigmoid
-        params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
+        #params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
         #params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
-        #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]] * out_channels)
+        par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]] * out_channels)
         #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]])
-        #params = par.t()
+        params = par.t()
         #self.aggregation = ElementAggregationLayer(parameters=params)
         self.aggregation = FractionalElementAggregationLayer(parameters=params)
 
@@ -167,11 +167,11 @@ class SAGELafConv(MessagePassing):
 
         to_aggregate = self._get_vectors_to_aggregate(src, ids)
         for k, v in to_aggregate.items():
-            norm_v = torch.clamp(v, 1e-06, 1e06)
-            v_min = torch.min(norm_v)
-            v_max = torch.max(norm_v)
-            data = (norm_v - v_min)/max((v_max - v_min), 1e-06)
-            #data = self.sigmoid(v)
+            #norm_v = torch.clamp(v, 1e-06, 1e06)
+            v_min = torch.min(v)
+            v_max = torch.max(v)
+            #data = (norm_v - v_min)/max((v_max - v_min), 1e-06)
+            data = v - v_min
             out[k] = self.aggregation(data)
         return out
 
