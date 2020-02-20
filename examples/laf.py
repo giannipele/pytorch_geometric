@@ -7,14 +7,13 @@ from torch_geometric.nn import SplineConv, SAGELafConv, SAGEConv
 import sys
 import pdb
 import traceback
-from colorama import Fore, Back, Style
 from torch import autograd
 
 class SAGENet(torch.nn.Module):
-    def __init__(self, dataset, seed):
+    def __init__(self, dataset, seed, style, shared):
         super(SAGENet, self).__init__()
-        self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed)
-        self.conv2 = SAGELafConv(16, dataset.num_classes, seed=seed)
+        self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed, style=style, shared=shared)
+        self.conv2 = SAGELafConv(16, dataset.num_classes, seed=seed, style=style, shared=shared)
         #self.conv1 = SAGEConv(dataset.num_features, 16)
         #self.conv2 = SAGEConv(16, dataset.num_classes)
 
@@ -24,7 +23,7 @@ class SAGENet(torch.nn.Module):
         x = F.dropout(x, training=self.training)
         x = self.conv2(x, edge_index)
         return F.log_softmax(x, dim=1)
-EPOCH = 300
+EPOCH = 200
 
 
 def train(model, data, optimizer):
@@ -57,7 +56,8 @@ def test(model, data):
         accs.append(acc)
     return accs
 
-def main(exp_name, seed):
+def exp(exp_name, seed, style, shared):
+
     torch.manual_seed(seed)
     dataset = 'Cora'
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'data', dataset)
@@ -80,10 +80,9 @@ def main(exp_name, seed):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data = data.to(device)
-    model = SAGENet(dataset, seed).to(device)
+    model = SAGENet(dataset, seed, style, shared).to(device)
     #optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
-    anomaly_detector = GuruMeditation()
     #with anomaly_detector:
     with open('{}.log'.format(exp_name), 'w') as flog:
         best_acc = 0
@@ -113,30 +112,27 @@ def main(exp_name, seed):
         print('Test Accuracy: {}'.format(accs[1]))
         flog.write('Test Accuracy: {}\n'.format(accs[1]))
 
-class GuruMeditation (torch.autograd.detect_anomaly):
-    def __init__(self):
-        super(GuruMeditation, self).__init__()
-    def __enter__(self):
-        super(GuruMeditation, self).__enter__()
-        return self
-    def __exit__(self, type, value, trace):
-        super(GuruMeditation, self).__exit__()
-        if isinstance(value, RuntimeError):
-            traceback.print_tb(trace)
-            halt(str(value))
-
-def halt(msg):
-    print (Fore.RED + "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
-    print (Fore.RED + "┃ Software Failure. Press left mouse button to continue ┃")
-    print (Fore.RED + "┃        Guru Meditation 00000004, 0000AAC0             ┃")
-    print (Fore.RED + "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
-    print(Style.RESET_ALL)
-    print (msg)
-    pdb.set_trace()
+def main(exps):
+    for e in exps:
+        exp(e['name'], e['seed'], e['style'], e['shared'])
 
 if __name__ == '__main__':
-    exp = sys.argv[1]
-    seed = int(sys.argv[2])
-    main(exp, seed)
+    #exp = sys.argv[1]
+    #seed = int(sys.argv[2])
+#    exps = [{'name': 'minus_shared_1', "seed": 1, "style":'minus', "shared":True},
+#            {'name': 'minus_not_shared_1', "seed": 1, "style":'minus', "shared":False},
+#            {'name': 'minus_shared_2', "seed": 2, "style":'minus', "shared":True},
+#            {'name': 'minus_not_shared_@', "seed": 2, "style":'minus', "shared":False}
+#             ]
+    exps = [{'name': 'minus_not_shared_1', "seed": 1, "style":'minus', "shared":False},
+            {'name': 'minus_not_shared_2', "seed": 2, "style":'minus', "shared":False}
+             ]
+
+#    exps = [{'name': 'frac_shared_1', "seed": 1, "style":'frac', "shared":True},
+#            {'name': 'frac_not_shared_1', "seed": 1, "style":'frac', "shared":False},
+#            {'name': 'frac_shared_2', "seed": 2, "style":'frac', "shared":True},
+#            {'name': 'frac_not_shared_2', "seed": 2, "style":'frac', "shared":False}
+#             ]
+    main(exps)
 
 
