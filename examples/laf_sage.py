@@ -1,5 +1,6 @@
 import os
 import torch
+torch.version.cuda=None
 import torch.nn.functional as F
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T

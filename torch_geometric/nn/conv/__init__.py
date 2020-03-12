@@ -9,6 +9,7 @@ from .gat_conv import GATConv
 from .agnn_conv import AGNNConv
 from .tag_conv import TAGConv
 from .gin_conv import GINConv
+from .gin_conv import GINLafConv
 from .arma_conv import ARMAConv
 from .sg_conv import SGConv
 from .appnp import APPNP
@@ -39,6 +40,7 @@ __all__ = [
     'AGNNConv',
     'TAGConv',
     'GINConv',
+    'GINLafConv',
     'ARMAConv',
     'SGConv',
     'APPNP',
