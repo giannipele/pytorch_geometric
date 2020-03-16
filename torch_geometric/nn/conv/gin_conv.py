@@ -85,7 +85,7 @@ class GINLafConv(MessagePassing):
     """
 
     def __init__(self, nn, eps=0, train_eps=False, **kwargs):
-        aggr = 'laf'
+        self.aggr = 'laf'
         seed = 42
         atype = 'frac'
         shared = False
