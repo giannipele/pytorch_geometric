@@ -99,10 +99,15 @@ def test(loader):
     return correct / len(loader.dataset)
 
 
+b_test_acc = 0
 for epoch in range(1, 101):
     train_loss = train(epoch)
     train_acc = test(train_loader)
     test_acc = test(test_loader)
+    if test_acc >= b_test_acc:
+        torch.save(model.state_dict(), "laf_gin.model")
+        b_test_acc = test_acc
+
     print('Epoch: {:03d}, Train Loss: {:.7f}, '
           'Train Acc: {:.7f}, Test Acc: {:.7f}'.format(epoch, train_loss,
                                                        train_acc, test_acc))
