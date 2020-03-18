@@ -15,10 +15,10 @@ from torch import autograd
 class SAGENet(torch.nn.Module):
     def __init__(self, dataset, seed, style, shared):
         super(SAGENet, self).__init__()
-        self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed, style=style, shared=shared)
-        self.conv2 = SAGELafConv(16, dataset.num_classes, seed=seed, style=style, shared=shared)
-        #self.conv1 = SAGEConv(dataset.num_features, 16)
-        #self.conv2 = SAGEConv(16, dataset.num_classes)
+        #self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed, style=style, shared=shared)
+        #self.conv2 = SAGELafConv(16, dataset.num_classes, seed=seed, style=style, shared=shared)
+        self.conv1 = SAGEConv(dataset.num_features, 128)
+        self.conv2 = SAGEConv(128, dataset.num_classes)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -115,6 +115,9 @@ def exp(exp_name, seed, style, shared):
             print('Train: {}'.format(torch.sum(data.train_mask)))
             print('Validation: {}'.format(torch.sum(data.val_mask)))
             print('Test: {}'.format(torch.sum(data.test_mask)))
+            flog.write('train: {}\n'.format(torch.sum(data.train_mask)))
+            flog.write('validation: {}\n'.format(torch.sum(data.val_mask)))
+            flog.write('test: {}\n'.format(torch.sum(data.test_mask)))
 
             data = data.to(device)
             model = SAGENet(dataset, seed*fold, style, shared).to(device)
@@ -152,7 +155,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'frac_shared_1603', "seed": 1603, "style":'frac', "shared":True},
+    exps = [{'name': 'sage_1603_128', "seed": 1603, "style":'frac', "shared":True},
              ]
     main(exps)
 
