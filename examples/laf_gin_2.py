@@ -16,23 +16,28 @@ class GINNet(torch.nn.Module):
         dim = 32
 
         nn1 = Sequential(Linear(dataset.num_features, dim), ReLU(), Linear(dim, dim))
-        self.conv1 = GINLafConv(nn1, embed_dim=dataset.num_features)
+        #self.conv1 = GINLafConv(nn1, embed_dim=dataset.num_features)
+        self.conv1 = GINConv(nn1)
         self.bn1 = torch.nn.BatchNorm1d(dim)
 
         nn2 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
-        self.conv2 = GINLafConv(nn2, embed_dim=dim)
+        #self.conv2 = GINLafConv(nn2, embed_dim=dim)
+        self.conv2 = GINConv(nn2)
         self.bn2 = torch.nn.BatchNorm1d(dim)
 
         nn3 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
-        self.conv3 = GINLafConv(nn3, embed_dim=dim)
+        #self.conv3 = GINLafConv(nn3, embed_dim=dim)
+        self.conv3 = GINConv(nn3)
         self.bn3 = torch.nn.BatchNorm1d(dim)
 
         nn4 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
-        self.conv4 = GINLafConv(nn4, embed_dim=dim)
+        #self.conv4 = GINLafConv(nn4, embed_dim=dim)
+        self.conv4 = GINConv(nn4)
         self.bn4 = torch.nn.BatchNorm1d(dim)
 
         nn5 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
-        self.conv5 = GINLafConv(nn5, embed_dim=dim)
+        #self.conv5 = GINLafConv(nn5, embed_dim=dim)
+        self.conv5 = GINConv(nn5)
         self.bn5 = torch.nn.BatchNorm1d(dim)
 
         #self.fc1 = Linear(dim, dim)
@@ -45,10 +50,10 @@ class GINNet(torch.nn.Module):
         x = self.bn2(x)
         x = F.relu(self.conv3(x, edge_index))
         x = self.bn3(x)
-        x = F.relu(self.conv4(x, edge_index))
-        x = self.bn4(x)
-        x = F.relu(self.conv5(x, edge_index))
-        x = self.bn5(x)
+        #x = F.relu(self.conv4(x, edge_index))
+        #x = self.bn4(x)
+        #x = F.relu(self.conv5(x, edge_index))
+        #x = self.bn5(x)
         #x = global_add_pool(x, batch)
         #x = F.relu(self.fc1(x))
         x = F.dropout(x, p=0.5, training=self.training)
@@ -174,7 +179,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'frac_shared_1603', "seed": 1603, "style":'frac', "shared":True},
+    exps = [{'name': 'gin_1603', "seed": 1603, "style":'frac', "shared":True},
             ]
     main(exps)
 
