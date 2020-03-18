@@ -36,7 +36,7 @@ class SAGEConv(MessagePassing):
 
     def __init__(self, in_channels, out_channels, normalize=False, bias=True,
                  **kwargs):
-        super(SAGEConv, self).__init__(aggr='mean', **kwargs)
+        super(SAGEConv, self).__init__(aggr='add', **kwargs)
 
         self.in_channels = in_channels
         self.out_channels = out_channels

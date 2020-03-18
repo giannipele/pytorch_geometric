@@ -15,10 +15,10 @@ from torch import autograd
 class SAGENet(torch.nn.Module):
     def __init__(self, dataset, seed, style, shared):
         super(SAGENet, self).__init__()
-        self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed, style=style, shared=shared)
-        self.conv2 = SAGELafConv(16, dataset.num_classes, seed=seed, style=style, shared=shared)
-        #self.conv1 = SAGEConv(dataset.num_features, 16)
-        #self.conv2 = SAGEConv(16, dataset.num_classes)
+        #self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed, style=style, shared=shared)
+        #self.conv2 = SAGELafConv(16, dataset.num_classes, seed=seed, style=style, shared=shared)
+        self.conv1 = SAGEConv(dataset.num_features, 16)
+        self.conv2 = SAGEConv(16, dataset.num_classes)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
