@@ -16,39 +16,44 @@ class GINNet(torch.nn.Module):
         dim = 32
 
         nn1 = Sequential(Linear(dataset.num_features, dim), ReLU(), Linear(dim, dim))
+        #self.conv1 = GINConv(nn1)
         self.conv1 = GINLafConv(nn1, embed_dim=dataset.num_features)
         self.bn1 = torch.nn.BatchNorm1d(dim)
 
         nn2 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        #self.conv2 = GINConv(nn2)
         self.conv2 = GINLafConv(nn2, embed_dim=dim)
         self.bn2 = torch.nn.BatchNorm1d(dim)
 
         nn3 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        #self.conv3 = GINConv(nn3)
         self.conv3 = GINLafConv(nn3, embed_dim=dim)
         self.bn3 = torch.nn.BatchNorm1d(dim)
 
         nn4 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        #self.conv4 = GINConv(nn4)
         self.conv4 = GINLafConv(nn4, embed_dim=dim)
         self.bn4 = torch.nn.BatchNorm1d(dim)
 
         nn5 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        #self.conv5 = GINConv(nn5)
         self.conv5 = GINLafConv(nn5, embed_dim=dim)
         self.bn5 = torch.nn.BatchNorm1d(dim)
 
         #self.fc1 = Linear(dim, dim)
         self.fc2 = Linear(dim, dataset.num_classes)
 
-    def forward(self, x, edge_index, batch):
+    def forward(self, x, edge_index):
         x = F.relu(self.conv1(x, edge_index))
         x = self.bn1(x)
         x = F.relu(self.conv2(x, edge_index))
         x = self.bn2(x)
         x = F.relu(self.conv3(x, edge_index))
         x = self.bn3(x)
-        x = F.relu(self.conv4(x, edge_index))
-        x = self.bn4(x)
-        x = F.relu(self.conv5(x, edge_index))
-        x = self.bn5(x)
+        #x = F.relu(self.conv4(x, edge_index))
+        #x = self.bn4(x)
+        #x = F.relu(self.conv5(x, edge_index))
+        #x = self.bn5(x)
         #x = global_add_pool(x, batch)
         #x = F.relu(self.fc1(x))
         x = F.dropout(x, p=0.5, training=self.training)
@@ -86,7 +91,7 @@ def train(model, data, optimizer):
     with autograd.detect_anomaly():
         model.train()
         optimizer.zero_grad()
-        F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
+        F.nll_loss(model(data, data.edge_index)[data.train_mask], data.y[data.train_mask]).backward()
         optimizer.step()
 
     #par = []
@@ -148,7 +153,7 @@ def exp(exp_name, seed, style, shared):
                 train_accs = validate(model, data)
                 log = 'Epoch: {:03d}, Train: {:.4f}, Validation: {:.4f}'
                 print(log.format(epoch, *train_accs))
-                log+='\n'
+                log += '\n'
                 flog.write(log.format(epoch, *train_accs))
                 if train_accs[1] > best_acc:
                     best_acc = train_accs[1]

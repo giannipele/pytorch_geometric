@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.nn import Sequential, Linear, ReLU
 from torch_geometric.datasets import TUDataset
 from torch_geometric.data import DataLoader
-from torch_geometric.nn import GINLafConv, global_add_pool
+from torch_geometric.nn import GINLafConv, global_add_pool, GINConv
 
 path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'MUTAG')
 dataset = TUDataset(path, name='MUTAG').shuffle()
@@ -24,22 +24,27 @@ class Net(torch.nn.Module):
 
         nn1 = Sequential(Linear(num_features, dim), ReLU(), Linear(dim, dim))
         self.conv1 = GINLafConv(nn1, embed_dim=num_features)
+        #self.conv1 = GINConv(nn1)
         self.bn1 = torch.nn.BatchNorm1d(dim)
 
         nn2 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
         self.conv2 = GINLafConv(nn2, embed_dim=dim)
+        #self.conv2 = GINConv(nn2)
         self.bn2 = torch.nn.BatchNorm1d(dim)
 
         nn3 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
         self.conv3 = GINLafConv(nn3, embed_dim=dim)
+        #self.conv3 = GINConv(nn3)
         self.bn3 = torch.nn.BatchNorm1d(dim)
 
         nn4 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
         self.conv4 = GINLafConv(nn4, embed_dim=dim)
+        #self.conv4 = GINConv(nn4)
         self.bn4 = torch.nn.BatchNorm1d(dim)
 
         nn5 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
         self.conv5 = GINLafConv(nn5, embed_dim=dim)
+        #self.conv5 = GINConv(nn5)
         self.bn5 = torch.nn.BatchNorm1d(dim)
 
         self.fc1 = Linear(dim, dim)
