@@ -96,12 +96,11 @@ def gen_folds(n_data, folds, seed):
         yield (train_mask, val_mask, test_mask)
 
 def train(model, data, optimizer):
-    with autograd.detect_anomaly():
-        model.train()
-        optimizer.zero_grad()
-        #F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
-        F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
-        optimizer.step()
+    model.train()
+    optimizer.zero_grad()
+    #F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
+    F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
+    optimizer.step()
 
     #par = []
     #for p in model.conv1.aggregation.parameters():
@@ -191,7 +190,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'sage_1603_128', "seed": 1603, "style":'frac', "shared":True},
+    exps = [{'name': 'laf_sage_cora2303', "seed": 2303, "style":'frac', "shared":True},
              ]
     main(exps)
 
