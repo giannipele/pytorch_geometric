@@ -15,10 +15,10 @@ from torch.nn import Linear
 class GraphSAGE(torch.nn.Module):
     def __init__(self, dataset, num_layers, hidden):
         super(GraphSAGE, self).__init__()
-        self.conv1 = SAGEConv(dataset.num_features, hidden)
+        self.conv1 = SAGELafConv(dataset.num_features, hidden)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 1):
-            self.convs.append(SAGEConv(hidden, hidden))
+            self.convs.append(SAGELafConv(hidden, hidden))
         self.lin1 = Linear(hidden, hidden)
         self.lin2 = Linear(hidden, dataset.num_classes)
 
@@ -34,7 +34,6 @@ class GraphSAGE(torch.nn.Module):
         x = F.relu(self.conv1(x, edge_index))
         for conv in self.convs:
             x = F.relu(conv(x, edge_index))
-        #x = global_mean_pool(x, batch)
         x = F.relu(self.lin1(x))
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin2(x)

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.utils import add_remaining_self_loops
-from torch_geometric.laf import ElementAggregationLayer, FractionalElementAggregationLayer
+from torch_geometric.laf import ElementAggregationLayer, FractionalElementAggregationLayer, ScatterAggregationLayer
 
 from itertools import repeat
 #import laf
@@ -117,19 +117,15 @@ class SAGELafConv(MessagePassing):
             self.register_parameter('bias', None)
 
         self.reset_parameters()
-        #self.sigmoid = torch.sigmoid
         if shared:
             params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
         else:
             params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
-        #params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
-        #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]] * out_channels)
-        #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]])
-        #params = par.t()
-        if atype == 'minus': 
+        if atype == 'minus':
             self.aggregation = ElementAggregationLayer(parameters=params)
         elif atype == 'frac':
-            self.aggregation = FractionalElementAggregationLayer(parameters=params)
+            #self.aggregation = FractionalElementAggregationLayer(parameters=params)
+            self.aggregation = ScatterAggregationLayer(parameters=params)
 
     def reset_parameters(self):
         uniform(self.in_channels, self.weight)
@@ -168,9 +164,11 @@ class SAGELafConv(MessagePassing):
         "add", "mean" and "max" operations specified in :meth:`__init__` by
         the :obj:`aggr` argument.
         """
-        return self._laf_aggregate(src=inputs, index=index, dim=self.node_dim, dim_size=dim_size)
-        #else:
-        #    return scatter_(self.aggr, inputs, index, self.node_dim, dim_size)
+        v_min = torch.min(inputs)
+        inputs = inputs - v_min
+        out = self.aggregation(inputs, index)
+        return out
+        #return self._laf_aggregate(src=inputs, index=index, dim=self.node_dim, dim_size=dim_size)
 
 
     def _laf_aggregate(self, src, index, dim=-1, out=None, dim_size=None, fill_value=0):
