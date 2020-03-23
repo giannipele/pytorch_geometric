@@ -14,14 +14,14 @@ from torch_geometric.nn import GINLafConv, GINConv
 class GIN(torch.nn.Module):
     def __init__(self, dataset, num_layers, hidden, seed):
         super(GIN, self).__init__()
-        self.conv1 = GINLafConv(Sequential(
+        self.conv1 = GINConv(Sequential(
             Linear(dataset.num_features, hidden),
             ReLU(),
             Linear(hidden, hidden),
             ReLU(),
             BN(hidden),
         ),
-            train_eps=False, seed=seed)
+            train_eps=False)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 1):
             self.convs.append(
