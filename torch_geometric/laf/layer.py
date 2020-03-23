@@ -260,10 +260,10 @@ class ScatterAggregationLayer(LAFLayer):
         return res
 
 
-lay = ScatterAggregationLayer(parameters=torch.tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]], dtype=torch.float32).t())
-data = torch.randint(10,(6,5), dtype=torch.float32)
-index = torch.tensor([0,0,2,1,1,2])
-out = lay.forward(data, index)
-print(data)
-print(index)
-print(out)
+#lay = ScatterAggregationLayer(parameters=torch.tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]], dtype=torch.float32).t())
+#data = torch.randint(10,(6,5), dtype=torch.float32)
+#index = torch.tensor([0,0,2,1,1,2])
+#out = lay.forward(data, index)
+#print(data)
+#print(index)
+#print(out)

@@ -5,7 +5,7 @@ from torch_geometric.utils import remove_self_loops
 from ..inits import reset
 from itertools import repeat
 import lhsmdu
-from torch_geometric.laf import ElementAggregationLayer, FractionalElementAggregationLayer
+from torch_geometric.laf import ElementAggregationLayer, FractionalElementAggregationLayer, ScatterAggregationLayer
 
 
 class GINConv(MessagePassing):
@@ -125,7 +125,8 @@ class GINLafConv(MessagePassing):
         if atype == 'minus':
             self.aggregation = ElementAggregationLayer(parameters=params)
         elif atype == 'frac':
-            self.aggregation = FractionalElementAggregationLayer(parameters=params)
+            #self.aggregation = FractionalElementAggregationLayer(parameters=params)
+            self.aggregation = ScatterAggregationLayer(parameters=params)
 
     def reset_parameters(self):
         reset(self.nn)
@@ -149,7 +150,11 @@ class GINLafConv(MessagePassing):
         "add", "mean" and "max" operations specified in :meth:`__init__` by
         the :obj:`aggr` argument.
         """
-        return self._laf_aggregate(src=inputs, index=index, dim=self.node_dim, dim_size=dim_size)
+        v_min = torch.min(inputs)
+        inputs = inputs - v_min
+        out = self.aggregation(inputs, index)
+        return out
+        #return self._laf_aggregate(src=inputs, index=index, dim=self.node_dim, dim_size=dim_size)
 
     def _laf_aggregate(self, src, index, dim=-1, out=None, dim_size=None, fill_value=0):
         src, out, index, dim = _gen(src, index, dim, out, dim_size, fill_value)
