@@ -7,8 +7,55 @@ import torch_geometric.transforms as T
 import math
 import numpy as np
 from torch import autograd
-from torch.nn import Sequential, Linear, ReLU
+from torch.nn import Sequential, Linear, ReLU, BatchNorm1d as BN
 from torch_geometric.nn import GINLafConv, GINConv
+
+
+class GIN(torch.nn.Module):
+    def __init__(self, dataset, num_layers, hidden, seed):
+        super(GIN, self).__init__()
+        self.conv1 = GINLafConv(Sequential(
+            Linear(dataset.num_features, hidden),
+            ReLU(),
+            Linear(hidden, hidden),
+            ReLU(),
+            BN(hidden),
+        ),
+            train_eps=False, seed=seed)
+        self.convs = torch.nn.ModuleList()
+        for i in range(num_layers - 1):
+            self.convs.append(
+                GINLafConv(Sequential(
+                    Linear(hidden, hidden),
+                    ReLU(),
+                    Linear(hidden, hidden),
+                    ReLU(),
+                    BN(hidden),
+                ),
+                    train_eps=False))
+        self.lin1 = Linear(hidden, hidden)
+        self.lin2 = Linear(hidden, dataset.num_classes)
+
+    def reset_parameters(self):
+        self.conv1.reset_parameters()
+        for conv in self.convs:
+            conv.reset_parameters()
+        self.lin1.reset_parameters()
+        self.lin2.reset_parameters()
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        x = self.conv1(x, edge_index)
+        for conv in self.convs:
+            x = conv(x, edge_index)
+        x = F.relu(self.lin1(x))
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.lin2(x)
+        return F.log_softmax(x, dim=-1)
+
+    def __repr__(self):
+        return self.__class__.__name__
+
 
 class GINNet(torch.nn.Module):
     def __init__(self, dataset):
@@ -60,7 +107,7 @@ class GINNet(torch.nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=-1)
 
-EPOCH = 5
+EPOCH = 200
 FOLDS = 5
 FOLDS_SEED = 92
 
@@ -91,7 +138,7 @@ def train(model, data, optimizer):
     with autograd.detect_anomaly():
         model.train()
         optimizer.zero_grad()
-        F.nll_loss(model(data.x[data.train_mask], data.edge_index), data.y[data.train_mask]).backward()
+        F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
         optimizer.step()
 
     #par = []
@@ -144,7 +191,8 @@ def exp(exp_name, seed, style, shared):
             print('Test: {}'.format(torch.sum(data.test_mask)))
 
             data = data.to(device)
-            model = GINNet(dataset).to(device)
+            #model = GINNet(dataset).to(device)
+            model = GIN(dataset, 2, 64, seed).to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
             best_acc = 0
             count = 0
@@ -179,7 +227,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'frac_shared_1603', "seed": 1603, "style":'frac', "shared":True},
+    exps = [{'name': 'laf_gin_cora_2303', "seed": 2303, "style":'frac', "shared":True},
             ]
     main(exps)
 

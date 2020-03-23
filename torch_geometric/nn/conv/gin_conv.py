@@ -86,9 +86,9 @@ class GINLafConv(MessagePassing):
 
     def __init__(self, nn, eps=0, train_eps=False, **kwargs):
         self.aggr = 'laf'
-        seed = 42
+        seed = 92
         atype = 'frac'
-        shared = False
+        shared = True
         embed_dim = '32'
         if 'aggr' in kwargs.keys():
             aggr = kwargs['aggr']
@@ -115,9 +115,9 @@ class GINLafConv(MessagePassing):
         self.reset_parameters()
 
         if shared:
-            params = torch.rand(size=(13, 1), requires_grad=False)
+            params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
         else:
-            params = torch.rand(size=(13, embed_dim), requires_grad=False)
+            params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
         #params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
         #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]] * out_channels)
         #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]])
