@@ -13,7 +13,7 @@ from torch_geometric.nn import GINLafConv, GINConv
 class GINNet(torch.nn.Module):
     def __init__(self, dataset):
         super(GINNet, self).__init__()
-        dim = 32
+        dim = 16
 
         nn1 = Sequential(Linear(dataset.num_features, dim), ReLU(), Linear(dim, dim))
         #self.conv1 = GINConv(nn1)
@@ -25,20 +25,20 @@ class GINNet(torch.nn.Module):
         self.conv2 = GINLafConv(nn2, embed_dim=dim)
         self.bn2 = torch.nn.BatchNorm1d(dim)
 
-        nn3 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
-        #self.conv3 = GINConv(nn3)
-        self.conv3 = GINLafConv(nn3, embed_dim=dim)
-        self.bn3 = torch.nn.BatchNorm1d(dim)
+        #nn3 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        ##self.conv3 = GINConv(nn3)
+        #self.conv3 = GINLafConv(nn3, embed_dim=dim)
+        #self.bn3 = torch.nn.BatchNorm1d(dim)
 
-        nn4 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
-        #self.conv4 = GINConv(nn4)
-        self.conv4 = GINLafConv(nn4, embed_dim=dim)
-        self.bn4 = torch.nn.BatchNorm1d(dim)
+        #nn4 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        ##self.conv4 = GINConv(nn4)
+        #self.conv4 = GINLafConv(nn4, embed_dim=dim)
+        #self.bn4 = torch.nn.BatchNorm1d(dim)
 
-        nn5 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
-        #self.conv5 = GINConv(nn5)
-        self.conv5 = GINLafConv(nn5, embed_dim=dim)
-        self.bn5 = torch.nn.BatchNorm1d(dim)
+        #nn5 = Sequential(Linear(dim, dim), ReLU(), Linear(dim, dim))
+        ##self.conv5 = GINConv(nn5)
+        #self.conv5 = GINLafConv(nn5, embed_dim=dim)
+        #self.bn5 = torch.nn.BatchNorm1d(dim)
 
         #self.fc1 = Linear(dim, dim)
         self.fc2 = Linear(dim, dataset.num_classes)
@@ -48,8 +48,8 @@ class GINNet(torch.nn.Module):
         x = self.bn1(x)
         x = F.relu(self.conv2(x, edge_index))
         x = self.bn2(x)
-        x = F.relu(self.conv3(x, edge_index))
-        x = self.bn3(x)
+        #x = F.relu(self.conv3(x, edge_index))
+        #x = self.bn3(x)
         #x = F.relu(self.conv4(x, edge_index))
         #x = self.bn4(x)
         #x = F.relu(self.conv5(x, edge_index))
@@ -60,8 +60,8 @@ class GINNet(torch.nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=-1)
 
-EPOCH = 200
-FOLDS = 10
+EPOCH = 5
+FOLDS = 5
 FOLDS_SEED = 92
 
 def gen_folds(n_data, folds, seed):

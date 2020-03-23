@@ -115,9 +115,9 @@ class GINLafConv(MessagePassing):
         self.reset_parameters()
 
         if shared:
-            params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
+            params = torch.rand(size=(13, 1), requires_grad=False)
         else:
-            params = torch.Tensor(lhsmdu.sample(13, embed_dim, randomSeed=seed))
+            params = torch.rand(size=(13, embed_dim), requires_grad=False)
         #params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
         #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]] * out_channels)
         #par = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]])
