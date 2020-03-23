@@ -91,18 +91,18 @@ class SAGELafConv(MessagePassing):
         aggr = 'laf'
         seed = 42
         atype = 'frac'
-        shared = False
+        shared = True
         if 'aggr' in kwargs.keys():
             aggr = kwargs['aggr']
         if 'seed' in kwargs.keys():
             seed = kwargs['seed']
+            del kwargs['seed']
         if 'style' in kwargs.keys():
             atype = kwargs['style']
+            del kwargs['style']
         if 'shared' in kwargs.keys():
             shared = kwargs['shared']
-        del kwargs['seed']
-        del kwargs['style']
-        del kwargs['shared']
+            del kwargs['shared']
 
         super(SAGELafConv, self).__init__(aggr=aggr, **kwargs)
 

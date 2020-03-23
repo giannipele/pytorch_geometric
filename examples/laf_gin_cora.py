@@ -91,7 +91,7 @@ def train(model, data, optimizer):
     with autograd.detect_anomaly():
         model.train()
         optimizer.zero_grad()
-        F.nll_loss(model(data, data.edge_index)[data.train_mask], data.y[data.train_mask]).backward()
+        F.nll_loss(model(data.x[data.train_mask], data.edge_index), data.y[data.train_mask]).backward()
         optimizer.step()
 
     #par = []
