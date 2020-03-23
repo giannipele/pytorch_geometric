@@ -63,6 +63,7 @@ EPOCH = 200
 FOLDS = 10
 FOLDS_SEED = 92
 
+
 def gen_folds(n_data, folds, seed):
     idx = np.random.RandomState(seed=seed).permutation(n_data)
     #idx = torch.randperm(n_data)
@@ -155,6 +156,7 @@ def exp(exp_name, seed, style, shared):
             data = data.to(device)
             #model = SAGENet(dataset, seed*fold, style, shared).to(device)
             model = GraphSAGE(dataset, num_layers=2, hidden=64).to(device)
+            print(list(model.parameters()))
             optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
             best_acc = 0
             count = 0

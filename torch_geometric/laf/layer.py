@@ -6,14 +6,14 @@ class LAFLayer(Module):
     def __init__(self, **kwargs):
         super(LAFLayer, self).__init__()
         if 'parameters' in kwargs.keys():
-            self.weights = kwargs['parameters']
+            self.weights = Parameter(kwargs['parameters'])
             self.units = self.weights.shape[1]
         elif 'units' in kwargs.keys():
             self.units = kwargs['units']
-            self.weights = torch.rand((13, self.units), requires_grad=True)
+            self.weights = Parameter(torch.rand((13, self.units), requires_grad=True))
         else:
             self.units = 1
-            self.weights = torch.rand((13, self.units), requires_grad=True)
+            self.weights = Parameter(torch.rand((13, self.units), requires_grad=True))
         if 'max' in kwargs.keys():
             self.max = kwargs['max']
         else:
