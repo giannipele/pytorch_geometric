@@ -1,6 +1,5 @@
 import os
 import torch
-torch.version.cuda=None
 import torch.nn.functional as F
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
@@ -135,11 +134,10 @@ def gen_folds(n_data, folds, seed):
 
 
 def train(model, data, optimizer):
-    with autograd.detect_anomaly():
-        model.train()
-        optimizer.zero_grad()
-        F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
-        optimizer.step()
+    model.train()
+    optimizer.zero_grad()
+    F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
+    optimizer.step()
 
     #par = []
     #for p in model.conv1.aggregation.parameters():
