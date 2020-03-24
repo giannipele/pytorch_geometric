@@ -215,10 +215,13 @@ class FractionalElementAggregationLayer(LAFLayer):
 class ScatterAggregationLayer(LAFLayer):
     def __init__(self, **kwargs):
         super(ScatterAggregationLayer, self).__init__(**kwargs)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            
 
     def forward(self, data, index):
         eps = 1e-6
         sup = 1e6
+        device = self.device
 
         output_dim = torch.tensor(index.unique().size(), dtype=torch.int32)
         feat_dim = torch.tensor(data.shape[1], dtype=torch.int32)
@@ -240,10 +243,10 @@ class ScatterAggregationLayer(LAFLayer):
         exp_3 = torch.pow(data_3, self.weights[5])
         exp_4 = torch.pow(data_4, self.weights[7])
 
-        scatter_1 = torch.clamp(torch.zeros((output_dim,feat_dim)).scatter_add_(0, idx, exp_1), eps, sup)
-        scatter_2 = torch.clamp(torch.zeros((output_dim,feat_dim)).scatter_add_(0, idx, exp_2), eps, sup)
-        scatter_3 = torch.clamp(torch.zeros((output_dim,feat_dim)).scatter_add_(0, idx, exp_3), eps, sup)
-        scatter_4 = torch.clamp(torch.zeros((output_dim,feat_dim)).scatter_add_(0, idx, exp_4), eps, sup)
+        scatter_1 = torch.clamp(torch.zeros((output_dim,feat_dim), device=device).scatter_add_(0, idx, exp_1), eps, sup)
+        scatter_2 = torch.clamp(torch.zeros((output_dim,feat_dim), device=device).scatter_add_(0, idx, exp_2), eps, sup)
+        scatter_3 = torch.clamp(torch.zeros((output_dim,feat_dim), device=device).scatter_add_(0, idx, exp_3), eps, sup)
+        scatter_4 = torch.clamp(torch.zeros((output_dim,feat_dim), device=device).scatter_add_(0, idx, exp_4), eps, sup)
 
         sqrt_1 = torch.pow(scatter_1, self.weights[0])
         sqrt_2 = torch.pow(scatter_2, self.weights[2])

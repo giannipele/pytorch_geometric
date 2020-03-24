@@ -24,7 +24,7 @@ class StoppingCriteria:
             self.stop = False
         else:
             self.counter += 1
-        if self.counter == 100:
+        if self.counter == 200:
             self.stop = True
 
     def __str__(self):

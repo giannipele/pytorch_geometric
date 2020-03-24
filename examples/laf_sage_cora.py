@@ -58,9 +58,9 @@ class SAGENet(torch.nn.Module):
         x = self.conv2(x, edge_index)
         return F.log_softmax(x, dim=1)
 
-EPOCH = 200
+EPOCH = 1000
 FOLDS = 10
-FOLDS_SEED = 92
+FOLDS_SEED = 196
 
 
 def gen_folds(n_data, folds, seed):
@@ -191,7 +191,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'laf_sage_cora2303', "seed": 2303, "style":'frac', "shared":True},
+    exps = [{'name': 'laf_sage_cora_2403', "seed": 2403, "style":'frac', "shared":True},
              ]
     main(exps)
 

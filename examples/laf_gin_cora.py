@@ -13,7 +13,7 @@ from torch_geometric.nn import GINLafConv, GINConv
 class GIN(torch.nn.Module):
     def __init__(self, dataset, num_layers, hidden, seed):
         super(GIN, self).__init__()
-        self.conv1 = GINConv(Sequential(
+        self.conv1 = GINLafConv(Sequential(
             Linear(dataset.num_features, hidden),
             ReLU(),
             Linear(hidden, hidden),
@@ -48,7 +48,7 @@ class GIN(torch.nn.Module):
         for conv in self.convs:
             x = conv(x, edge_index)
         x = F.relu(self.lin1(x))
-        x = F.dropout(x, p=0.5, training=self.training)
+        #x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin2(x)
         return F.log_softmax(x, dim=-1)
 
@@ -106,9 +106,9 @@ class GINNet(torch.nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=-1)
 
-EPOCH = 200
-FOLDS = 5
-FOLDS_SEED = 92
+EPOCH = 1000
+FOLDS = 10
+FOLDS_SEED = 196
 
 def gen_folds(n_data, folds, seed):
     idx = np.random.RandomState(seed=seed).permutation(n_data)
@@ -191,7 +191,7 @@ def exp(exp_name, seed, style, shared):
             data = data.to(device)
             #model = GINNet(dataset).to(device)
             model = GIN(dataset, 2, 64, seed).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
             best_acc = 0
             count = 0
             for epoch in range(1, EPOCH):
@@ -208,7 +208,7 @@ def exp(exp_name, seed, style, shared):
                     count = 0
                 else:
                     count += 1
-                if count == 50:
+                if count == 200:
                     break
             model.load_state_dict(torch.load("{}.dth".format(exp_name)))
             accs = test(model, data)
@@ -225,7 +225,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'laf_gin_cora_2303', "seed": 2303, "style":'frac', "shared":True},
+    exps = [{'name': 'laf_gin_cora_2403', "seed": 2403, "style":'frac', "shared":True},
             ]
     main(exps)
 
