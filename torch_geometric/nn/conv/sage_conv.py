@@ -121,6 +121,7 @@ class SAGELafConv(MessagePassing):
             params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
         else:
             params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
+        params = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]]).t()
         if atype == 'minus':
             self.aggregation = ElementAggregationLayer(parameters=params)
         elif atype == 'frac':
