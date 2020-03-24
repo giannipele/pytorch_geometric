@@ -15,9 +15,11 @@ from torch.nn import Linear
 class GraphSAGE(torch.nn.Module):
     def __init__(self, dataset, num_layers, hidden):
         super(GraphSAGE, self).__init__()
+        #self.conv1 = SAGEConv(dataset.num_features, hidden)
         self.conv1 = SAGELafConv(dataset.num_features, hidden)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 1):
+            #self.convs.append(SAGEConv(hidden, hidden))
             self.convs.append(SAGELafConv(hidden, hidden))
         self.lin1 = Linear(hidden, hidden)
         self.lin2 = Linear(hidden, dataset.num_classes)
@@ -35,7 +37,7 @@ class GraphSAGE(torch.nn.Module):
         for conv in self.convs:
             x = F.relu(conv(x, edge_index))
         x = F.relu(self.lin1(x))
-        x = F.dropout(x, p=0.5, training=self.training)
+        #x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin2(x)
         return F.log_softmax(x, dim=-1)
 
@@ -155,7 +157,7 @@ def exp(exp_name, seed, style, shared):
             #model = SAGENet(dataset, seed*fold, style, shared).to(device)
             model = GraphSAGE(dataset, num_layers=2, hidden=64).to(device)
             #print(list(model.parameters()))
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
             best_acc = 0
             count = 0
             for epoch in range(1, EPOCH):
@@ -173,7 +175,7 @@ def exp(exp_name, seed, style, shared):
                     count = 0
                 else:
                     count += 1
-                if count == 50:
+                if count == 200:
                     break
 
             model.load_state_dict(torch.load("{}.dth".format(exp_name)))
@@ -191,7 +193,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'laf_sage_cora_2403', "seed": 2403, "style":'frac', "shared":True},
+    exps = [{'name': 'sage_cora_2403', "seed": 2403, "style":'frac', "shared":True},
              ]
     main(exps)
 
