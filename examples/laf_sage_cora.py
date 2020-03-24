@@ -3,7 +3,9 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
-from torch_geometric.nn import SplineConv, SAGELafConv, SAGEConv
+from torch_geometric.nn import SAGELafConv, SAGEConv
+from torch_geometric.datasets import Reddit
+from torch_geometric.data import NeighborSampler
 import math
 import numpy as np
 import sys
@@ -127,12 +129,15 @@ def test(model, data):
     return accs
 
 
-def exp(exp_name, seed, style, shared):
+def exp(exp_name, seed, style, shared, dataset_name):
     torch.manual_seed(seed)
-    dataset = 'Cora'
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'data', dataset)
-    dataset = Planetoid(path, dataset, T.NormalizeFeatures())
-    data = dataset[0]
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'data', dataset_name)
+    if dataset_name == 'Cora':
+        dataset = Planetoid(path, dataset_name, T.NormalizeFeatures())
+        data = dataset[0]
+    elif dataset_name == 'Reddit':
+        dataset = Reddit(path)
+        data = dataset[0]
     fold = 0
     accuracies = []
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -189,11 +194,11 @@ def exp(exp_name, seed, style, shared):
 
 def main(exps):
     for e in exps:
-        exp(e['name'], e['seed'], e['style'], e['shared'])
+        exp(e['name'], e['seed'], e['style'], e['shared'], e['dataset_name'])
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'sage_cora_2403', "seed": 2403, "style":'frac', "shared":True},
+    exps = [{'name': 'sage_cora_2403', "seed": 2403, "style":'frac', "shared":True, "dataset_name":'Reddit' },
              ]
     main(exps)
 
