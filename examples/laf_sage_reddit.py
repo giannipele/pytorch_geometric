@@ -33,8 +33,10 @@ class GraphSAGE(torch.nn.Module):
         self.lin1.reset_parameters()
         self.lin2.reset_parameters()
 
-    def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+    def forward(self, x, data_flow):
+        data = data_flow[0]
+        x = x[data.n_id]
+        edge_index = data.edge_index
         x = F.relu(self.conv1(x, edge_index))
         for conv in self.convs:
             x = F.relu(conv(x, edge_index))
