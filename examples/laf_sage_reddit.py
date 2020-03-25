@@ -139,7 +139,6 @@ def exp(exp_name, seed, style, shared):
     data = dataset[0]
     loader = NeighborSampler(data, size=[25, 10], num_hops=2, batch_size=1000,
                              shuffle=True, add_self_loops=True)
-    data = dataset[0]
     fold = 0
     accuracies = []
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -160,7 +159,7 @@ def exp(exp_name, seed, style, shared):
             flog.write('validation: {}\n'.format(torch.sum(data.val_mask)))
             flog.write('test: {}\n'.format(torch.sum(data.test_mask)))
 
-            data = data.to(device)
+            #data = data.to(device)
             #model = SAGENet(dataset, seed*fold, style, shared).to(device)
             model = GraphSAGE(dataset, seed*fold, num_layers=2, hidden=64).to(device)
             #print(list(model.parameters()))
