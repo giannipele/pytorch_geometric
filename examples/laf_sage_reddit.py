@@ -15,10 +15,10 @@ from torch import autograd
 from torch.nn import Linear
 
 class GraphSAGE(torch.nn.Module):
-    def __init__(self, dataset, num_layers, hidden):
+    def __init__(self, dataset, seed, num_layers, hidden):
         super(GraphSAGE, self).__init__()
         #self.conv1 = SAGEConv(dataset.num_features, hidden)
-        self.conv1 = SAGELafConv(dataset.num_features, hidden)
+        self.conv1 = SAGELafConv(dataset.num_features, hidden, seed=seed)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 1):
             #self.convs.append(SAGEConv(hidden, hidden))
@@ -173,7 +173,7 @@ def exp(exp_name, seed, style, shared):
 
             data = data.to(device)
             #model = SAGENet(dataset, seed*fold, style, shared).to(device)
-            model = GraphSAGE(dataset, num_layers=2, hidden=64).to(device)
+            model = GraphSAGE(dataset, seed*fold, num_layers=2, hidden=64).to(device)
             #print(list(model.parameters()))
             optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
             best_acc = 0
