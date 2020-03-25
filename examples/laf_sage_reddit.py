@@ -99,38 +99,27 @@ def gen_folds(n_data, folds, seed):
         yield (train_mask, val_mask, test_mask)
 
 
-def train(model, data, optimizer, loader):
-    model.train()
-
+def train(model, data, optimizer, loader, device):
     total_loss = 0
     for data_flow in loader(data.train_mask):
         optimizer.zero_grad()
-        out = model(data.x, data_flow)
-        loss = F.nll_loss(out, data.y[data_flow.n_id])
+        out = model(data.x.to(device), data_flow.to(device))
+        loss = F.nll_loss(out, data.y[data_flow.n_id].to(device))
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * data_flow.batch_size
     return total_loss / data.train_mask.sum().item()
 
-    model.train()
-    optimizer.zero_grad()
-    #F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
-    F.nll_loss(model(data)[data.train_mask], data.y[data.train_mask]).backward()
-    optimizer.step()
 
-    #par = []
-    #for p in model.conv1.aggregation.parameters():
-    #    par.append(p)
-    #print(par)
-
-def validate(model, data):
+def validate(model, data, loader, device):
     model.eval()
-    logits, accs = model(data), []
-    for _, mask in data('train_mask', 'val_mask'):
-        pred = logits[mask].max(1)[1]
-        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
-        accs.append(acc)
-    return accs
+    correct = 0
+    mask = data.val_mask
+    for data_flow in loader(mask):
+        pred = model(data.x.to(device), data_flow.to(device)).max(1)[1]
+        correct += pred.eq(data.y[data_flow.n_id].to(device)).sum().item()
+    return correct / mask.sum().item()
+
 
 def test(model, data):
     model.eval()
@@ -180,8 +169,8 @@ def exp(exp_name, seed, style, shared):
             count = 0
             for epoch in range(1, EPOCH):
                 print(list(model.conv1.aggregation.parameters()))
-                train(model, data, optimizer, loader)
-                train_accs = validate(model, data)
+                train(model, data, optimizer, loader, device)
+                train_accs = validate(model, data, loader, device)
                 log = 'Epoch: {:03d}, Train: {:.4f}, Validation: {:.4f}'
                 print(log.format(epoch, *train_accs))
                 log+='\n'
