@@ -211,7 +211,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'sage_cora_2403', "seed": 2403, "style":'frac', "shared":True},
+    exps = [{'name': 'laf_sage_reddit_2403', "seed": 2403, "style":'frac', "shared":True},
              ]
     main(exps)
 
