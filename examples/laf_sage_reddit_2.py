@@ -144,14 +144,14 @@ def exp(exp_name, seed, style, shared):
             count = 0
             for epoch in range(1, EPOCH):
                 #print(list(model.conv1.aggregation.parameters()))
-                train(data, model, loader, optimizer, device)
-                train_accs = validate(data, model, loader, device, data.val_mask)
+                train_acc = train(data, model, loader, optimizer, device)
+                val_acc = validate(data, model, loader, device, data.val_mask)
                 log = 'Epoch: {:03d}, Train: {:.4f}, Validation: {:.4f}'
-                print(log.format(epoch, *train_accs))
+                print(log.format(epoch, train_acc, val_acc))
                 log+='\n'
-                flog.write(log.format(epoch, *train_accs))
-                if train_accs[1] > best_acc:
-                    best_acc = train_accs[1]
+                flog.write(log.format(epoch, train_acc, val_acc))
+                if val_acc < best_acc:
+                    best_acc = val_acc
                     torch.save(model.state_dict(), "{}.dth".format(exp_name))
                     print("Saving model at iteration {}".format(epoch))
                     count = 0
@@ -161,10 +161,10 @@ def exp(exp_name, seed, style, shared):
                     break
 
             model.load_state_dict(torch.load("{}.dth".format(exp_name)))
-            accs = test(data, model, loader, device, data.test_mask)
-            print('Test Loss: {}'.format(accs[1]))
-            flog.write('Test Loss: {}\n'.format(accs[1]))
-            accuracies.append(accs[1])
+            test_acc = test(data, model, loader, device, data.test_mask)
+            print('Test Loss: {}'.format(test_acc))
+            flog.write('Test Loss: {}\n'.format(test_acc))
+            accuracies.append(test_acc)
         flog.write("----------\n")
         flog.write("Avg Test Loss: {}\tVariance: {}\n".format(np.mean(accuracies), np.var(accuracies)))
 
