@@ -13,13 +13,12 @@ from torch.nn import Linear
 class GraphSAGE(torch.nn.Module):
     def __init__(self, dataset, num_layers, hidden):
         super(GraphSAGE, self).__init__()
-        #self.conv1 = SAGEConv(dataset.num_features, hidden)
-        self.conv1 = SAGELafConv(dataset.num_features, hidden)
+        self.conv1 = SAGEConv(dataset.num_features, hidden)
+        #self.conv1 = SAGELafConv(dataset.num_features, hidden)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 2):
-            #self.convs.append(SAGEConv(hidden, hidden))
-            self.convs.append(SAGELafConv(hidden, hidden))
-        self.convn = SAGELafConv(hidden, dataset.num_classes)
+            self.convs.append(SAGEConv(hidden, hidden))
+            #self.convs.append(SAGELafConv(hidden, hidden))
         #self.lin1 = Linear(hidden, hidden)
         #self.lin2 = Linear(hidden, dataset.num_classes)
 
@@ -36,7 +35,6 @@ class GraphSAGE(torch.nn.Module):
         x = F.dropout(x, p=0.5, training=self.training)
         for conv in self.convs:
             x = F.relu(conv(x, edge_index))
-        x = F.relu(self.convn(x, edge_index))
         #x = F.relu(self.lin1(x))
         #x = F.dropout(x, p=0.5, training=self.training)
         #x = self.lin2(x)
@@ -190,7 +188,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'sage_cora_2403', "seed": 2403, "style":'frac', "shared":True},
+    exps = [{'name': 'sage_cora', "seed": 2603, "style":'frac', "shared":True},
              ]
     main(exps)
 
