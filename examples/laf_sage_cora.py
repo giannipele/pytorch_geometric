@@ -7,6 +7,7 @@ from torch_geometric.nn import SplineConv, SAGELafConv, SAGEConv
 import math
 import numpy as np
 import time
+from sklearn.metrics import classification_report, f1_score, accuracy_score
 from torch.nn import Linear
 
 
@@ -48,8 +49,8 @@ class GraphSAGE(torch.nn.Module):
         return self.__class__.__name__
 
 
-EPOCH = 1000
-FOLDS = 10
+EPOCH = 100
+FOLDS = 5
 FOLDS_SEED = 196
 
 
@@ -103,11 +104,16 @@ def validate(model, data):
 def test(model, data):
     model.eval()
     logits, accs = model(data), []
-    for _, mask in data('train_mask', 'test_mask'):
-        pred = logits[mask].max(1)[1]
-        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
-        accs.append(acc)
-    return accs
+    for _, mask in data('test_mask'):
+        y_pred = logits[mask].max(1)[1]
+        y_true = data.y[mask]
+        n_classes = len(y_true.unique())
+        target_names = ['class_{}'.format(i) for i in range(n_classes)]
+        cr = classification_report(y_true,y_pred, target_names=target_names)
+        acc = accuracy_score(y_true, y_pred)
+        f1 = f1_score(y_true, y_pred, average='micro')
+        accs.append((cr, acc, f1))
+    return accs[0]
 
 
 def exp(exp_name, seed, style, shared):
@@ -121,6 +127,7 @@ def exp(exp_name, seed, style, shared):
 
     fold = 0
     fold_accuracies = []
+    fold_f1 = []
     itr_time = []
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -169,13 +176,16 @@ def exp(exp_name, seed, style, shared):
                 itr_time.append(time.time()-start_itr)
 
             model.load_state_dict(torch.load(res_dir + "{}.dth".format(exp_name)))
-            accs = test(model, data)
-            print('Test Accuracy: {:.5f}'.format(accs[1]))
-            flog.write('Test Accuracy: {:.5f}\n'.format(accs[1]))
-            fold_accuracies.append(accs[1])
+            cr, test_acc, test_f1 = test(model, data)
+            print(cr)
+            flog.write(cr+"\n")
+            fold_accuracies.append(test_acc)
+            fold_f1.append(test_f1)
         flog.write("----------\n")
         flog.write("Avg Test Accuracy: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_accuracies), np.var(fold_accuracies)))
         print("Avg Test Accuracy: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_accuracies), np.var(fold_accuracies)))
+        flog.write("Avg Test Micro-F1: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_f1), np.var(fold_f1)))
+        print("Avg Test Micro-F1: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_f1), np.var(fold_f1)))
 
         stop_time = time.time() - start_time
         avg_itr_time = np.mean(itr_time)
