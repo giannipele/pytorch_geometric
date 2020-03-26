@@ -1,73 +1,38 @@
-import os
+import os.path as osp
+import time
 import torch
 import torch.nn.functional as F
-from torch_geometric.datasets import Planetoid
-import torch_geometric.transforms as T
-from torch_geometric.nn import SAGELafConv, SAGEConv
 from torch_geometric.datasets import Reddit
 from torch_geometric.data import NeighborSampler
-import math
-import numpy as np
-import sys
-import pdb
-import traceback
-from torch import autograd
+from torch_geometric.nn import SAGEConv, GATConv, SAGELafConv
 from torch.nn import Linear
+import numpy as np
+import math
+
 
 class GraphSAGE(torch.nn.Module):
-    def __init__(self, dataset, seed, num_layers, hidden):
+    def __init__(self, seed, in_channels, out_channels):
         super(GraphSAGE, self).__init__()
-        #self.conv1 = SAGEConv(dataset.num_features, hidden)
-        self.conv1 = SAGELafConv(dataset.num_features, hidden, seed=seed)
-        self.convs = torch.nn.ModuleList()
-        for i in range(num_layers - 1):
-            #self.convs.append(SAGEConv(hidden, hidden))
-            self.convs.append(SAGELafConv(hidden, hidden))
-        self.lin1 = Linear(hidden, hidden)
-        self.lin2 = Linear(hidden, dataset.num_classes)
-
-    def reset_parameters(self):
-        self.conv1.reset_parameters()
-        for conv in self.convs:
-            conv.reset_parameters()
-        self.lin1.reset_parameters()
-        self.lin2.reset_parameters()
+        #self.conv1 = SAGEConv(in_channels, 16, normalize=False)
+        #self.conv2 = SAGEConv(16, out_channels, normalize=False)
+        self.conv1 = SAGELafConv(in_channels, 64, normalize=False)
+        self.conv2 = SAGELafConv(64, out_channels, normalize=False)
+        #self.lin = Linear(64, out_channels)
 
     def forward(self, x, data_flow):
         data = data_flow[0]
         x = x[data.n_id]
-        edge_index = data.edge_index
-        x = F.relu(self.conv1(x, edge_index))
-        for conv in self.convs:
-            x = F.relu(conv(x, edge_index))
-        x = F.relu(self.lin1(x))
-        #x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin2(x)
-        return F.log_softmax(x, dim=-1)
-
-    def __repr__(self):
-        return self.__class__.__name__
-
-
-class SAGENet(torch.nn.Module):
-    def __init__(self, dataset, seed, style, shared):
-        super(SAGENet, self).__init__()
-        #self.conv1 = SAGELafConv(dataset.num_features, 16, seed=seed, style=style, shared=shared)
-        #self.conv2 = SAGELafConv(16, dataset.num_classes, seed=seed, style=style, shared=shared)
-        self.conv1 = SAGEConv(dataset.num_features, 128)
-        self.conv2 = SAGEConv(128, dataset.num_classes)
-
-    def forward(self, data):
-        x, edge_index = data.x, data.edge_index
-        x = F.relu(self.conv1(x, edge_index))
-        x = F.dropout(x, training=self.training)
-        x = self.conv2(x, edge_index)
+        x = F.relu(self.conv1((x, None), data.edge_index, size=data.size))
+        x = F.dropout(x, p=0.5, training=self.training)
+        data = data_flow[1]
+        x = F.relu(self.conv2((x, None), data.edge_index, size=data.size))
+        #x = self.lin(x)
         return F.log_softmax(x, dim=1)
 
-EPOCH = 1000
-FOLDS = 10
-FOLDS_SEED = 196
 
+EPOCH = 200
+FOLDS = 5
+FOLDS_SEED = 196
 
 def gen_folds(n_data, folds, seed):
     idx = np.random.RandomState(seed=seed).permutation(n_data)
@@ -101,7 +66,10 @@ def gen_folds(n_data, folds, seed):
         yield (train_mask, val_mask, test_mask)
 
 
-def train(model, data, optimizer, loader, device):
+
+def train(data, model, loader, optimizer, device):
+    model.train()
+
     total_loss = 0
     for data_flow in loader(data.train_mask):
         optimizer.zero_grad()
@@ -113,38 +81,44 @@ def train(model, data, optimizer, loader, device):
     return total_loss / data.train_mask.sum().item()
 
 
-def validate(model, data, loader, device):
+def test(data, model, loader, device, mask):
     model.eval()
+
     correct = 0
-    mask = data.val_mask
     for data_flow in loader(mask):
         pred = model(data.x.to(device), data_flow.to(device)).max(1)[1]
         correct += pred.eq(data.y[data_flow.n_id].to(device)).sum().item()
     return correct / mask.sum().item()
 
 
-def test(model, data):
+def validate(data, model, loader, device, mask):
     model.eval()
-    logits, accs = model(data), []
-    for _, mask in data('train_mask', 'test_mask'):
-        pred = logits[mask].max(1)[1]
-        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
-        accs.append(acc)
-    return accs
+
+    correct = 0
+    for data_flow in loader(mask):
+        pred = model(data.x.to(device), data_flow.to(device)).max(1)[1]
+        correct += pred.eq(data.y[data_flow.n_id].to(device)).sum().item()
+    return correct / mask.sum().item()
 
 
 def exp(exp_name, seed, style, shared):
     torch.manual_seed(seed)
-    dataset = 'Reddit'
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'data', dataset)
+    res_dir = "results/"
+    path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Reddit')
     dataset = Reddit(path)
     data = dataset[0]
     loader = NeighborSampler(data, size=[25, 10], num_hops=2, batch_size=1000,
                              shuffle=True, add_self_loops=True)
     fold = 0
-    accuracies = []
+    fold_accuracies = []
+    itr_time = []
+
+    feats = dataset.num_features
+    classes = dataset.num_classes
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    with open('{}.log'.format(exp_name), 'w') as flog:
+
+    with open(res_dir + '{}.log'.format(exp_name), 'w') as flog:
+        start_time = time.time()
         for tr_mask, vl_mask, ts_mask in gen_folds(data.x.shape[0], FOLDS, FOLDS_SEED):
             fold += 1
             print("FOLD:", fold)
@@ -161,38 +135,46 @@ def exp(exp_name, seed, style, shared):
             flog.write('validation: {}\n'.format(torch.sum(data.val_mask)))
             flog.write('test: {}\n'.format(torch.sum(data.test_mask)))
 
-            #data = data.to(device)
-            #model = SAGENet(dataset, seed*fold, style, shared).to(device)
-            model = GraphSAGE(dataset, seed*fold, num_layers=2, hidden=64).to(device)
-            #print(list(model.parameters()))
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+            model = GraphSAGE(seed * fold, feats, classes).to(device)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.00001)
             best_acc = 0
             count = 0
+
             for epoch in range(1, EPOCH):
-                print(list(model.conv1.aggregation.parameters()))
-                train(model, data, optimizer, loader, device)
-                train_accs = validate(model, data, loader, device)
-                log = 'Epoch: {:03d}, Train: {:.4f}, Validation: {:.4f}'
-                print(log.format(epoch, *train_accs))
+                start_itr = time.time()
+                train_acc = train(data, model, loader, optimizer, device)
+                val_acc = validate(data, model, loader, device, data.val_mask)
+                log = 'Epoch: {:03d}, Train: {:.5f}, Validation: {:.5f}'
+                print(log.format(epoch, train_acc, val_acc))
                 log+='\n'
-                flog.write(log.format(epoch, *train_accs))
-                if train_accs[1] > best_acc:
-                    best_acc = train_accs[1]
-                    torch.save(model.state_dict(), "{}.dth".format(exp_name))
+                flog.write(log.format(epoch, train_acc, val_acc))
+                if val_acc > best_acc:
+                    best_acc = val_acc
+                    torch.save(model.state_dict(), res_dir + "{}.dth".format(exp_name))
                     print("Saving model at iteration {}".format(epoch))
                     count = 0
                 else:
                     count += 1
-                if count == 200:
+                if count == 100:
                     break
+                itr_time.append(time.time() - start_itr)
 
-            model.load_state_dict(torch.load("{}.dth".format(exp_name)))
-            accs = test(model, data)
-            print('Test Accuracy: {}'.format(accs[1]))
-            flog.write('Test Accuracy: {}\n'.format(accs[1]))
-            accuracies.append(accs[1])
+            model.load_state_dict(torch.load(res_dir + "{}.dth".format(exp_name)))
+            test_acc = test(data, model, loader, device, data.test_mask)
+            print('Test Loss: {:.5f}'.format(test_acc))
+            flog.write('Test Loss: {:.5f}\n'.format(test_acc))
+            fold_accuracies.append(test_acc)
         flog.write("----------\n")
-        flog.write("Avg Test Accuracy: {}\tVariance: {}\n".format(np.mean(accuracies), np.var(accuracies)))
+        flog.write("Avg Test Loss: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_accuracies), np.var(fold_accuracies)))
+        print("Avg Test Loss: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_accuracies), np.var(fold_accuracies)))
+
+        stop_time = time.time() - start_time
+        avg_itr_time = np.mean(itr_time)
+
+        flog.write("Avg iteration time: {:.3f} s\n".format(avg_itr_time))
+        flog.write("Execution time: {:.3f} s\n".format(stop_time))
+        print("Avg iteration time: {:.3f} s\n".format(avg_itr_time))
+        print("Execution time: {:.3f} s\n".format(stop_time))
 
 
 def main(exps):
@@ -201,8 +183,9 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'laf_sage_reddit_2403', "seed": 2403, "style":'frac', "shared":True},
-             ]
+    exps = [{'name': 'laf_sage_reddit', "seed": 2603, "style":'frac', "shared":True},
+            ]
     main(exps)
+
 
 
