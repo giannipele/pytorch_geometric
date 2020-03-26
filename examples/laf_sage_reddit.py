@@ -136,7 +136,7 @@ def exp(exp_name, seed, style, shared):
             flog.write('test: {}\n'.format(torch.sum(data.test_mask)))
 
             model = GraphSAGE(seed * fold, feats, classes).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.00001)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, weight_decay=0.00001)
             best_acc = 0
             count = 0
 
@@ -155,7 +155,7 @@ def exp(exp_name, seed, style, shared):
                     count = 0
                 else:
                     count += 1
-                if count == 100:
+                if count == 50:
                     break
                 itr_time.append(time.time() - start_itr)
 
