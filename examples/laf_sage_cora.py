@@ -14,14 +14,14 @@ from torch.nn import Linear
 class GraphSAGE(torch.nn.Module):
     def __init__(self, dataset, num_layers, hidden):
         super(GraphSAGE, self).__init__()
-        self.conv1 = SAGEConv(dataset.num_features, hidden)
-        #self.conv1 = SAGELafConv(dataset.num_features, hidden)
+        #self.conv1 = SAGEConv(dataset.num_features, hidden)
+        self.conv1 = SAGELafConv(dataset.num_features, hidden)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 2):
             #self.convs.append(SAGEConv(hidden, hidden))
             self.convs.append(SAGELafConv(hidden, hidden))
-        #self.convn = SAGELafConv(hidden, dataset.num_classes)
-        self.convn = SAGEConv(hidden, dataset.num_classes)
+        self.convn = SAGELafConv(hidden, dataset.num_classes)
+        #self.convn = SAGEConv(hidden, dataset.num_classes)
         #self.lin1 = Linear(hidden, hidden)
         #self.lin2 = Linear(hidden, dataset.num_classes)
 
@@ -49,7 +49,7 @@ class GraphSAGE(torch.nn.Module):
         return self.__class__.__name__
 
 
-EPOCH = 100
+EPOCH = 1000
 FOLDS = 5
 FOLDS_SEED = 196
 
@@ -105,9 +105,11 @@ def test(model, data):
     model.eval()
     logits, accs = model(data), []
     for _, mask in data('test_mask'):
-        y_pred = logits[mask].max(1)[1]
-        y_true = data.y[mask]
-        n_classes = len(y_true.unique())
+        pred = logits[mask].max(1)[1]
+        true = data.y[mask]
+        y_pred = pred.detach().cpu().clone().numpy()
+        y_true = true.detach().cpu().clone().numpy()
+        n_classes = np.unique(y_true).size
         target_names = ['class_{}'.format(i) for i in range(n_classes)]
         cr = classification_report(y_true,y_pred, target_names=target_names)
         acc = accuracy_score(y_true, y_pred)
@@ -202,7 +204,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'sage_cora', "seed": 2503, "style":'frac', "shared":True},
+    exps = [{'name': 'laf_sage_cora2', "seed": 2603, "style":'frac', "shared":True},
              ]
     main(exps)
 

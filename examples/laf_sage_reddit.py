@@ -14,10 +14,10 @@ from sklearn.metrics import classification_report, f1_score, accuracy_score
 class GraphSAGE(torch.nn.Module):
     def __init__(self, seed, in_channels, out_channels):
         super(GraphSAGE, self).__init__()
-        #self.conv1 = SAGEConv(in_channels, 16, normalize=False)
-        #self.conv2 = SAGEConv(16, out_channels, normalize=False)
-        self.conv1 = SAGELafConv(in_channels, 64, normalize=False)
-        self.conv2 = SAGELafConv(64, out_channels, normalize=False)
+        self.conv1 = SAGEConv(in_channels, 16, normalize=False)
+        self.conv2 = SAGEConv(16, out_channels, normalize=False)
+        #self.conv1 = SAGELafConv(in_channels, 64, normalize=False)
+        #self.conv2 = SAGELafConv(64, out_channels, normalize=False)
         #self.lin = Linear(64, out_channels)
 
     def forward(self, x, data_flow):
@@ -31,7 +31,7 @@ class GraphSAGE(torch.nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-EPOCH = 200
+EPOCH = 150
 FOLDS = 5
 FOLDS_SEED = 196
 
@@ -87,9 +87,11 @@ def test(data, model, loader, device, mask):
     accs = []
     correct = 0
     for data_flow in loader(mask):
-        y_pred = model(data.x.to(device), data_flow.to(device)).max(1)[1]
-        y_true = data.y[mask]
-        n_classes = len(y_true.unique())
+        pred = model(data.x.to(device), data_flow.to(device)).max(1)[1]
+        true = data.y[data_flow.n_id]
+        y_pred = pred.detach().cpu().clone().numpy()
+        y_true = true.detach().cpu().clone().numpy()
+        n_classes = max(np.unique(y_pred).size, np.unique(y_true).size)
         target_names = ['class_{}'.format(i) for i in range(n_classes)]
         cr = classification_report(y_true, y_pred, target_names=target_names)
         acc = accuracy_score(y_true, y_pred)
@@ -114,7 +116,7 @@ def exp(exp_name, seed, style, shared):
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Reddit')
     dataset = Reddit(path)
     data = dataset[0]
-    loader = NeighborSampler(data, size=[25, 10], num_hops=2, batch_size=1000,
+    loader = NeighborSampler(data, size=[10, 5], num_hops=2, batch_size=1000,
                              shuffle=True, add_self_loops=True)
     fold = 0
     fold_accuracies = []
@@ -144,7 +146,7 @@ def exp(exp_name, seed, style, shared):
             flog.write('test: {}\n'.format(torch.sum(data.test_mask)))
 
             model = GraphSAGE(seed * fold, feats, classes).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, weight_decay=0.00001)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.00001)
             best_acc = 0
             count = 0
 
@@ -195,7 +197,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'laf_sage_reddit', "seed": 2603, "style":'frac', "shared":True},
+    exps = [{'name': 'sage_reddit2', "seed": 2603, "style":'frac', "shared":True},
             ]
     main(exps)
 
