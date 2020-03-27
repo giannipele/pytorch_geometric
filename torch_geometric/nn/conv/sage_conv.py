@@ -5,6 +5,7 @@ from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.utils import add_remaining_self_loops
 from torch_geometric.laf import ElementAggregationLayer, FractionalElementAggregationLayer, ScatterAggregationLayer
+from torch_geometric.nn.pool import max_pool
 
 from itertools import repeat
 #import laf
@@ -165,80 +166,11 @@ class SAGELafConv(MessagePassing):
         "add", "mean" and "max" operations specified in :meth:`__init__` by
         the :obj:`aggr` argument.
         """
-        v_min = torch.min(inputs)
-        inputs = inputs - v_min
-        out = self.aggregation(inputs, index)
+
+        out = max_pool(index,inputs)
+        #v_min = torch.min(inputs)
+        #inputs = inputs - v_min
+        #out = self.aggregation(inputs, index)
         return out
-        #return self._laf_aggregate(src=inputs, index=index, dim=self.node_dim, dim_size=dim_size)
-
-
-    def _laf_aggregate(self, src, index, dim=-1, out=None, dim_size=None, fill_value=0):
-        src, out, index, dim = _gen(src, index, dim, out, dim_size, fill_value)
-        ids = {}
-        for c in range(index.shape[0]):
-            id = int(index[c][0])
-            if id not in ids.keys():
-                ids[id] = []
-            ids[id].append(c)
-
-        to_aggregate = self._get_vectors_to_aggregate(src, ids)
-        for k, v in to_aggregate.items():
-            #norm_v = torch.clamp(v, 1e-06, 1e06)
-            v_min = torch.min(v)
-            v_max = torch.max(v)
-            #data = (norm_v - v_min)/max((v_max - v_min), 1e-06)
-            data = v - v_min
-            out[k] = self.aggregation(data, max=torch.max(data))
-        return out
-
-    def _get_vectors_to_aggregate(self, src, ids):
-        vecs = {}
-        for id in ids.keys():
-            vecs[id] = src[ids[id]]
-        return vecs
-
-    def __repr__(self):
-        return '{}({}, {})'.format(self.__class__.__name__, self.in_channels,
-                                   self.out_channels)
-        
-def _gen(src, index, dim=-1, out=None, dim_size=None, fill_value=0):
-    dim = range(src.dim())[dim]  # Get real dim value.
-
-    # Automatically expand index tensor to the right dimensions.
-    if index.dim() == 1:
-        index_size = list(repeat(1, src.dim()))
-        index_size[dim] = src.size(dim)
-        if index.numel() > 0:
-            index = index.view(index_size).expand_as(src)
-        else:  # pragma: no cover
-            # PyTorch has a bug when view is used on zero-element tensors.
-            index = src.new_empty(index_size, dtype=torch.long)
-
-    # Broadcasting capabilties: Expand dimensions to match.
-    if src.dim() != index.dim():
-        raise ValueError(
-            ('Number of dimensions of src and index tensor do not match, '
-             'got {} and {}').format(src.dim(), index.dim()))
-
-    expand_size = []
-    for s, i in zip(src.size(), index.size()):
-        expand_size += [-1 if s == i and s != 1 and i != 1 else max(i, s)]
-    src = src.expand(expand_size)
-    index = index.expand_as(src)
-
-    # Generate output tensor if not given.
-    if out is None:
-        out_size = list(src.size())
-        dim_size = maybe_dim_size(index, dim_size)
-        out_size[dim] = dim_size
-        out = src.new_full(out_size, fill_value)
-
-    return src, out, index, dim
-
-
-def maybe_dim_size(index, dim_size=None):
-    if dim_size is not None:
-        return dim_size
-    return index.max().item() + 1 if index.numel() > 0 else 0
 
 
