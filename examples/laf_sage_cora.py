@@ -12,16 +12,16 @@ from torch.nn import Linear
 
 
 class GraphSAGE(torch.nn.Module):
-    def __init__(self, dataset, num_layers, hidden):
+    def __init__(self, dataset, num_layers, hidden, seed):
         super(GraphSAGE, self).__init__()
-        self.conv1 = SAGEConv(dataset.num_features, hidden)
-        #self.conv1 = SAGELafConv(dataset.num_features, hidden)
+        #self.conv1 = SAGEConv(dataset.num_features, hidden)
+        self.conv1 = SAGELafConv(dataset.num_features, hidden, seed=seed)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 2):
-            self.convs.append(SAGEConv(hidden, hidden))
-            #self.convs.append(SAGELafConv(hidden, hidden))
-        #self.convn = SAGELafConv(hidden, dataset.num_classes)
-        self.convn = SAGEConv(hidden, hidden)
+            #self.convs.append(SAGEConv(hidden, hidden))
+            self.convs.append(SAGELafConv(hidden, hidden, seed=seed+i+2))
+        self.convn = SAGELafConv(hidden, hidden, seed=seed+num_layers)
+        #self.convn = SAGEConv(hidden, hidden)
         #self.lin1 = Linear(hidden, hidden)
         self.lin2 = Linear(hidden, dataset.num_classes)
 
@@ -153,7 +153,7 @@ def exp(exp_name, seed, style, shared):
             flog.write('validation: {}\n'.format(torch.sum(data.val_mask)))
             flog.write('test: {}\n'.format(torch.sum(data.test_mask)))
 
-            model = GraphSAGE(dataset, num_layers=2, hidden=64).to(device)
+            model = GraphSAGE(dataset, num_layers=2, hidden=64, seed=seed + (2*fold)).to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0001)
             best_acc = 0
             count = 0
@@ -204,7 +204,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'laf_sage_cora2', "seed": 2603, "style":'frac', "shared":True},
+    exps = [{'name': 'laf_sage_correct', "seed": 3103, "style":'frac', "shared":True},
              ]
     main(exps)
 
