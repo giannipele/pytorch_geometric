@@ -1,13 +1,14 @@
-import os
+import os.path as osp
 import torch
 import torch.nn.functional as F
-from torch_geometric.datasets import Planetoid
+from torch_geometric.datasets import Planetoid, Reddit, PPI
 import torch_geometric.transforms as T
 from torch_geometric.nn import SplineConv, SAGELafConv, SAGEConv
 import math
 import numpy as np
 import time
 from sklearn.metrics import classification_report, f1_score, accuracy_score
+from torch_geometric.data import NeighborSampler
 from torch.nn import Linear
 
 
@@ -21,9 +22,9 @@ class GraphSAGE(torch.nn.Module):
             self.convs.append(SAGEConv(hidden, hidden))
             #self.convs.append(SAGELafConv(hidden, hidden))
         #self.convn = SAGELafConv(hidden, dataset.num_classes)
-        self.convn = SAGEConv(hidden, hidden)
+        self.convn = SAGEConv(hidden, dataset.num_classes)
         #self.lin1 = Linear(hidden, hidden)
-        self.lin2 = Linear(hidden, dataset.num_classes)
+        #self.lin2 = Linear(hidden, dataset.num_classes)
 
     def reset_parameters(self):
         self.conv1.reset_parameters()
@@ -31,18 +32,18 @@ class GraphSAGE(torch.nn.Module):
             conv.reset_parameters()
         self.convn.reset_parameters()
         #self.lin1.reset_parameters()
-        self.lin2.reset_parameters()
+        #self.lin2.reset_parameters()
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
-        x = self.conv1(x, edge_index)
+        x = F.relu(self.conv1(x, edge_index))
         x = F.dropout(x, p=0.5, training=self.training)
         for conv in self.convs:
-            x = conv(x, edge_index)
-        x = self.convn(x, edge_index)
+            x = F.relu(conv(x, edge_index))
+        x = F.relu(self.convn(x, edge_index))
         #x = F.relu(self.lin1(x))
         #x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin2(x)
+        #x = self.lin2(x)
         return F.log_softmax(x, dim=-1)
 
     def __repr__(self):
@@ -72,17 +73,26 @@ def gen_folds(n_data, folds, seed):
         rest = val_mask + test_mask
         train_mask = ~rest
 
-        # print(val_idx,val_end)
-        # print(test_idx, test_end)
-        # print("TR:", train_mask)
-        # print("VL:", val_mask)
-        # print("TS:", test_mask)
-        # print("=============================")
-
         test_idx = test_idx + offset
         val_idx = 0 if val_idx + offset >= n_data else val_idx + offset
         yield (train_mask, val_mask, test_mask)
 
+
+def get_dataset(name):
+    if name.to_lower() == 'cora':
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', name)
+        dataset = Planetoid(path, name, T.NormalizeFeatures())
+        loader = NeighborSampler(dataset[0], size=[25, 10], num_hops=2, batch_size=1000,
+                                 shuffle=False, add_self_loops=True)
+        return dataset, loader
+    elif name.to_lower() == 'reddit':
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', name)
+        dataset = Reddit(path)
+        loader = NeighborSampler(dataset[0], size=[25, 10], num_hops=2, batch_size=1000,
+                                 shuffle=False, add_self_loops=True)
+        return dataset, loader
+    elif name.to_lower() == 'ppi':
+        pass
 
 def train(model, data, optimizer):
     model.train()
@@ -118,76 +128,50 @@ def test(model, data):
     return accs[0]
 
 
-def exp(exp_name, seed, style, shared):
+def exp(exp_name, dataset_name, seed, style, shared):
     torch.manual_seed(seed)
     res_dir = "results/"
+    start_time = time.time()
 
-    dataset = 'Cora'
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'data', dataset)
-    dataset = Planetoid(path, dataset, T.NormalizeFeatures())
-    data = dataset[0]
+    data = get_dataset('cora')
 
-    fold = 0
-    fold_accuracies = []
-    fold_f1 = []
     itr_time = []
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     data = data.to(device)
 
+    print("Loading {} dataset took {} s".format(dataset_name, time.time()-start_time))
+
+    model = GraphSAGE(dataset, num_layers=2, hidden=64).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0001)
+    best_acc = 0
+    count = 0
+
     with open(res_dir + '{}.log'.format(exp_name), 'w') as flog:
-        start_time = time.time()
-        for tr_mask, vl_mask, ts_mask in gen_folds(data.x.shape[0], FOLDS, FOLDS_SEED):
-            fold += 1
-            print("FOLD:", fold)
-            flog.write("fold #{}\n".format(fold))
+        for epoch in range(1, EPOCH):
+            start_itr = time.time()
+            train(model, data, optimizer)
+            train_accs = validate(model, data)
+            log = 'Epoch: {:03d}, Train: {:.5f}, Validation: {:.5f}'
+            print(log.format(epoch, *train_accs))
+            log+='\n'
+            flog.write(log.format(epoch, *train_accs))
+            if train_accs[1] > best_acc:
+                best_acc = train_accs[1]
+                torch.save(model.state_dict(), res_dir + "{}.dth".format(exp_name))
+                print("Saving model at iteration {}".format(epoch))
+                count = 0
+            else:
+                count += 1
+            if count == 100:
+                break
 
-            data.train_mask = tr_mask
-            data.val_mask = vl_mask
-            data.test_mask = ts_mask
+            itr_time.append(time.time()-start_itr)
 
-            print('Train: {}'.format(torch.sum(data.train_mask)))
-            print('Validation: {}'.format(torch.sum(data.val_mask)))
-            print('Test: {}'.format(torch.sum(data.test_mask)))
-            flog.write('train: {}\n'.format(torch.sum(data.train_mask)))
-            flog.write('validation: {}\n'.format(torch.sum(data.val_mask)))
-            flog.write('test: {}\n'.format(torch.sum(data.test_mask)))
-
-            model = GraphSAGE(dataset, num_layers=2, hidden=64).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0001)
-            best_acc = 0
-            count = 0
-            for epoch in range(1, EPOCH):
-                start_itr = time.time()
-                train(model, data, optimizer)
-                train_accs = validate(model, data)
-                log = 'Epoch: {:03d}, Train: {:.5f}, Validation: {:.5f}'
-                print(log.format(epoch, *train_accs))
-                log+='\n'
-                flog.write(log.format(epoch, *train_accs))
-                if train_accs[1] > best_acc:
-                    best_acc = train_accs[1]
-                    torch.save(model.state_dict(), res_dir + "{}.dth".format(exp_name))
-                    print("Saving model at iteration {}".format(epoch))
-                    count = 0
-                else:
-                    count += 1
-                if count == 100:
-                    break
-
-                itr_time.append(time.time()-start_itr)
-
-            model.load_state_dict(torch.load(res_dir + "{}.dth".format(exp_name)))
-            cr, test_acc, test_f1 = test(model, data)
-            print(cr)
-            flog.write(cr+"\n")
-            fold_accuracies.append(test_acc)
-            fold_f1.append(test_f1)
-        flog.write("----------\n")
-        flog.write("Avg Test Accuracy: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_accuracies), np.var(fold_accuracies)))
-        print("Avg Test Accuracy: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_accuracies), np.var(fold_accuracies)))
-        flog.write("Avg Test Micro-F1: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_f1), np.var(fold_f1)))
-        print("Avg Test Micro-F1: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_f1), np.var(fold_f1)))
+        model.load_state_dict(torch.load(res_dir + "{}.dth".format(exp_name)))
+        cr, test_acc, test_f1 = test(model, data)
+        print(cr)
+        flog.write(cr+"\n")
 
         stop_time = time.time() - start_time
         avg_itr_time = np.mean(itr_time)
@@ -200,11 +184,11 @@ def exp(exp_name, seed, style, shared):
 
 def main(exps):
     for e in exps:
-        exp(e['name'], e['seed'], e['style'], e['shared'])
+        exp(e['name'], e['dataset_name'], e['seed'], e['style'], e['shared'])
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'laf_sage_cora2', "seed": 2603, "style":'frac', "shared":True},
+    exps = [{"name": 'laf_sage_cora2', "dataset_name": 'cora', "seed": 2603, "style": 'frac', "shared": True},
              ]
     main(exps)
 
