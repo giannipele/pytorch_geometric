@@ -186,13 +186,13 @@ class SAGELafConv(MessagePassing):
         self.weight = Parameter(torch.Tensor(self.in_channels, out_channels))
 
         if bias:
-            self.bias = Parameter(torch.Tensor(out_channels))
+            self.bias = Parameter(torch.Tensor(in_channels))
         else:
             self.register_parameter('bias', None)
 
         self.reset_parameters()
         if shared:
-            params = torch.Tensor(lhsmdu.sample(13, 1, randomSeed=seed))
+            params = torch.rand((13, 1))
         else:
             params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
         #params = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]]).t()
@@ -219,7 +219,7 @@ class SAGELafConv(MessagePassing):
         else:
             x = (None if x[0] is None else torch.matmul(x[0], self.weight),
                  None if x[1] is None else torch.matmul(x[1], self.weight))
-        return x
+        return F.relu(x)
 
     def message(self, x_j, edge_weight):
         return x_j if edge_weight is None else edge_weight.view(-1, 1) * x_j
