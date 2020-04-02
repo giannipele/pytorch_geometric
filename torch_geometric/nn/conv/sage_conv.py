@@ -166,7 +166,7 @@ class SAGELafConv(MessagePassing):
         seed = 42
         atype = 'frac'
         shared = True
-        fun = 'mean'
+        fun = 'none'
         if 'aggr' in kwargs.keys():
             aggr = kwargs['aggr']
         if 'seed' in kwargs.keys():
@@ -196,31 +196,31 @@ class SAGELafConv(MessagePassing):
 
         self.reset_parameters()
         #if shared:
-        #    params = torch.rand((13, 1))
+        params = torch.rand((13, 1))
         #else:
         #    params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
         if fun == 'mean':
             params = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]]).t()
-        if fun == 'sum':
+        elif fun == 'sum':
             params = torch.Tensor([[1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]]).t()
-        if fun == 'max':
+        elif fun == 'max':
             params = torch.Tensor([[10, 10, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]]).t()
-        if fun == 'min':
+        elif fun == 'min':
             params = torch.Tensor([[0, 0, 10, 10, 0, 0, 0, 0, 0, 1, 0, 0, 1]]).t()
-        if fun == 'minmax':
+        elif fun == 'minmax':
             params = torch.Tensor([[0, 0, 10, 10, 10, 10, 0, 0, 0, 1, 1, 0, 0]]).t()
-        if fun == 'count':
+        elif fun == 'count':
             params = torch.Tensor([[1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]]).t()
-        if fun == 'maxmin':
+        elif fun == 'maxmin':
             params = torch.Tensor([[10, 10, 0, 0, 0, 0, 10, 10, 1, 0, 0, 1, 0]]).t()
         eps = torch.randint(-1000,1000,(13,1), dtype=torch.float)/100000 
         params = params + eps
         print(params)
-        if atype == 'minus':
-            self.aggregation = ElementAggregationLayer(parameters=params)
-        elif atype == 'frac':
+        #if atype == 'minus':
+        #    self.aggregation = ElementAggregationLayer(parameters=params)
+        #if atype == 'frac':
             #self.aggregation = FractionalElementAggregationLayer(parameters=params)
-            self.aggregation = ScatterAggregationLayer(parameters=params)
+        self.aggregation = ScatterAggregationLayer(parameters=params)
 
     def reset_parameters(self):
         uniform(self.in_channels, self.weight)

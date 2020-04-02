@@ -12,7 +12,7 @@ from torch_geometric.data import NeighborSampler
 from torch.nn import Linear
 from torch_geometric.data import InMemoryDataset, Data
 
-EPOCH = 5
+EPOCH = 100
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 NUM_LAYER = 2
 
@@ -20,12 +20,12 @@ NUM_LAYER = 2
 class GraphSAGE(torch.nn.Module):
     def __init__(self, dataset, num_layers, hidden):
         super(GraphSAGE, self).__init__()
-        self.conv1 = SAGEConvCorrect(dataset.num_features, hidden)
-        #self.conv1 = SAGELafConv(dataset.num_features, hidden)
+        #self.conv1 = SAGEConvCorrect(dataset.num_features, hidden)
+        self.conv1 = SAGELafConv(dataset.num_features, hidden)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 1):
-            self.convs.append(SAGEConvCorrect(hidden, hidden))
-            #self.convs.append(SAGELafConv(hidden, hidden))
+            #self.convs.append(SAGEConvCorrect(hidden, hidden))
+            self.convs.append(SAGELafConv(hidden, hidden))
         self.lin = Linear(hidden, dataset.num_classes)
 
     def reset_parameters(self):
@@ -188,12 +188,9 @@ def exp(exp_name, dataset_name, seed, style, shared):
 
     dataset, loader = get_dataset(dataset_name, num_hops=NUM_LAYER)
     data = dataset[0]
+    print("Loading {} dataset took {} s".format(dataset_name, time.time()-start_time))
 
     itr_time = []
-
-    data = data.to(DEVICE)
-
-    print("Loading {} dataset took {} s".format(dataset_name, time.time()-start_time))
 
     model = GraphSAGE(dataset, num_layers=NUM_LAYER, hidden=64).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0001)
@@ -201,6 +198,25 @@ def exp(exp_name, dataset_name, seed, style, shared):
     count = 0
 
     with open(res_dir + '{}.log'.format(exp_name), 'w') as flog:
+
+        print('Train: {}'.format(torch.sum(data.train_mask)))
+        print('Validation: {}'.format(torch.sum(data.val_mask)))
+        print('Test: {}'.format(torch.sum(data.test_mask)))
+        flog.write('train: {}\n'.format(torch.sum(data.train_mask)))
+        flog.write('validation: {}\n'.format(torch.sum(data.val_mask)))
+        flog.write('test: {}\n'.format(torch.sum(data.test_mask)))
+        flog.write("Conv1: {}\n".format(list(model.conv1.aggregation.parameters())))
+        i = 2
+        for c in model.convs:
+            flog.write("Conv{}: {}\n".format(i,list(c.aggregation.parameters())))
+            i +=1
+
+        print("Conv1: {}".format(list(model.conv1.aggregation.parameters())))
+        i = 2
+        for c in model.convs:
+            print("Conv{}: {}".format(i,list(c.aggregation.parameters())))
+            i +=1
+
         for epoch in range(1, EPOCH+1):
             start_itr = time.time()
             tr_loss, tr_acc = train2(data, model, loader, optimizer)
@@ -226,6 +242,17 @@ def exp(exp_name, dataset_name, seed, style, shared):
         print(cr)
         flog.write(cr+"\n")
 
+        flog.write("Conv1: {}\n".format(list(model.conv1.aggregation.parameters())))
+        i = 2
+        for c in model.convs:
+            flog.write("Conv{}: {}\n".format(i,list(c.aggregation.parameters())))
+            i +=1
+
+        print("Conv1: {}".format(list(model.conv1.aggregation.parameters())))
+        i = 2
+        for c in model.convs:
+            print("Conv{}: {}".format(i,list(c.aggregation.parameters())))
+            i +=1
         stop_time = time.time() - start_time
         avg_itr_time = np.mean(itr_time)
 
@@ -254,19 +281,19 @@ class RedditSage(InMemoryDataset):
     def process(self):
 
         x = torch.load('../data/RedditSage/embs.trc')
-        edge_index = torch.load('../data/RedditSage/edge_idx.trc')
+        edge_index = torch.load('../data/RedditSage/edge_index.trc')
         train_mask = torch.load('../data/RedditSage/train_mask.trc')
         val_mask = torch.load('../data/RedditSage/val_mask.trc')
         test_mask = torch.load('../data/RedditSage/test_mask.trc')
         target = torch.load('../data/RedditSage/y.trc')
 
         y = torch.tensor(target, dtype=torch.long)
-        edge_index.type(torch.float)
+        edge_index.type(torch.long)
         train_mask.type(torch.long)
         val_mask.type(torch.long)
         test_mask.type(torch.long)
 
-        data = Data(x=x, edge_index=edge_index, y=y)
+        data = Data(x=x.float(), edge_index=edge_index.long(), y=y)
         data.train_mask = train_mask
         data.val_mask = val_mask
         data.test_mask = test_mask
@@ -278,7 +305,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{"name": 'laf_sage_reddit', "dataset_name": 'reddit', "seed": 2603, "style": 'frac', "shared": True},
+    exps = [{"name": 'laf_sage_reddit', "dataset_name": 'reddit', "seed": 204, "style": 'frac', "shared": True},
              ]
     main(exps)
 
