@@ -71,7 +71,8 @@ class Net(torch.nn.Module):
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = GraphSAGE(train_dataset, 2, 64).to(device)
+#model = GraphSAGE(train_dataset, 2, 64).to(device)
+model = Net().to(device)
 loss_op = torch.nn.BCEWithLogitsLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
 
