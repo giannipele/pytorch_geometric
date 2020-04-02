@@ -95,8 +95,9 @@ def get_dataset(name, num_hops):
         loader = NeighborSampler(dataset[0], size=[25, 10], num_hops=num_hops, batch_size=500,
                                  shuffle=True, add_self_loops=True)
     elif name.lower() == 'reddit':
-        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', name)
-        dataset = Reddit(path)
+        #path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', name)
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'RedditSage')
+        dataset = RedditSage(path)
         loader = NeighborSampler(dataset[0], size=[25, 10], num_hops=num_hops, batch_size=1000,
                                  shuffle=True, add_self_loops=True)
     return dataset, loader
@@ -185,9 +186,11 @@ def exp(exp_name, dataset_name, seed, style, shared):
     res_dir = "results/"
     start_time = time.time()
 
-    dataset, loader = get_dataset('cora', num_hops=NUM_LAYER)
+    dataset, loader = get_dataset(dataset_name, num_hops=NUM_LAYER)
+    yl = dataset[0].y
+    dataset[0].y = torch.tensor(yl,dtype=torch.long)
     data = dataset[0]
-
+    print(type(data.y))
     itr_time = []
 
     data = data.to(DEVICE)
@@ -257,14 +260,19 @@ class RedditSage(InMemoryDataset):
         train_mask = torch.load('../data/RedditSage/train_mask.trc')
         val_mask = torch.load('../data/RedditSage/val_mask.trc')
         test_mask = torch.load('../data/RedditSage/test_mask.trc')
-        y = torch.load('../data/RedditSage/y.trc')
+        target = torch.load('../data/RedditSage/y.trc')
+
+        y = torch.tensor(target, dtype=torch.long)
+        edge_index.type(torch.float)
+        train_mask.type(torch.long)
+        val_mask.type(torch.long)
+        test_mask.type(torch.long)
 
         data = Data(x=x, edge_index=edge_index, y=y)
         data.train_mask = train_mask
         data.val_mask = val_mask
         data.test_mask = test_mask
-
-        torch.save(self.collate(data), self.processed_paths[0])
+        torch.save(self.collate([data]), self.processed_paths[0])
 
 def main(exps):
     for e in exps:
@@ -272,7 +280,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{"name": 'laf_sage_cora2', "dataset_name": 'cora', "seed": 2603, "style": 'frac', "shared": True},
+    exps = [{"name": 'laf_sage_reddit', "dataset_name": 'reddit', "seed": 2603, "style": 'frac', "shared": True},
              ]
     main(exps)
 
