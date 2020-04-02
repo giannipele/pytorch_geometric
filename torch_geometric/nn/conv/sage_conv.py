@@ -239,7 +239,7 @@ class SAGELafConv(MessagePassing):
         else:
             x = (None if x[0] is None else torch.matmul(x[0], self.weight),
                  None if x[1] is None else torch.matmul(x[1], self.weight))
-        return F.relu(x)
+        return x
 
     def message(self, x_j, edge_weight):
         return x_j if edge_weight is None else edge_weight.view(-1, 1) * x_j

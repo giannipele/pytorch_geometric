@@ -253,20 +253,24 @@ class RedditSage(InMemoryDataset):
 
     def process(self):
 
-        #x = torch.load('../data/RedditSage/embs.trc')
-        x = torch.Tensor((5,602), dtype=torch.float)
+        x = torch.load('../data/RedditSage/embs.trc')
         edge_index = torch.load('../data/RedditSage/edge_idx.trc')
         train_mask = torch.load('../data/RedditSage/train_mask.trc')
         val_mask = torch.load('../data/RedditSage/val_mask.trc')
         test_mask = torch.load('../data/RedditSage/test_mask.trc')
-        y = torch.load('../data/RedditSage/y.trc')
+        target = torch.load('../data/RedditSage/y.trc')
+
+        y = torch.tensor(target, dtype=torch.long)
+        edge_index.type(torch.float)
+        train_mask.type(torch.long)
+        val_mask.type(torch.long)
+        test_mask.type(torch.long)
 
         data = Data(x=x, edge_index=edge_index, y=y)
         data.train_mask = train_mask
         data.val_mask = val_mask
         data.test_mask = test_mask
-
-        torch.save(self.collate(data), self.processed_paths[0])
+        torch.save(self.collate([data]), self.processed_paths[0])
 
 def main(exps):
     for e in exps:
@@ -274,7 +278,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{"name": 'laf_sage_cora2', "dataset_name": 'reddit', "seed": 2603, "style": 'frac', "shared": True},
+    exps = [{"name": 'laf_sage_reddit', "dataset_name": 'reddit', "seed": 2603, "style": 'frac', "shared": True},
              ]
     main(exps)
 
