@@ -95,8 +95,9 @@ def get_dataset(name, num_hops):
         loader = NeighborSampler(dataset[0], size=[25, 10], num_hops=num_hops, batch_size=500,
                                  shuffle=True, add_self_loops=True)
     elif name.lower() == 'reddit':
-        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', name)
-        dataset = Reddit(path)
+        #path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', name)
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'RedditSage')
+        dataset = RedditSage(path)
         loader = NeighborSampler(dataset[0], size=[25, 10], num_hops=num_hops, batch_size=1000,
                                  shuffle=True, add_self_loops=True)
     return dataset, loader
@@ -185,7 +186,7 @@ def exp(exp_name, dataset_name, seed, style, shared):
     res_dir = "results/"
     start_time = time.time()
 
-    dataset, loader = get_dataset('cora', num_hops=NUM_LAYER)
+    dataset, loader = get_dataset(dataset_name, num_hops=NUM_LAYER)
     data = dataset[0]
 
     itr_time = []
@@ -252,7 +253,8 @@ class RedditSage(InMemoryDataset):
 
     def process(self):
 
-        x = torch.load('../data/RedditSage/embs.trc')
+        #x = torch.load('../data/RedditSage/embs.trc')
+        x = torch.Tensor((5,602), dtype=torch.float)
         edge_index = torch.load('../data/RedditSage/edge_idx.trc')
         train_mask = torch.load('../data/RedditSage/train_mask.trc')
         val_mask = torch.load('../data/RedditSage/val_mask.trc')
@@ -272,7 +274,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{"name": 'laf_sage_cora2', "dataset_name": 'cora', "seed": 2603, "style": 'frac', "shared": True},
+    exps = [{"name": 'laf_sage_cora2', "dataset_name": 'reddit', "seed": 2603, "style": 'frac', "shared": True},
              ]
     main(exps)
 
