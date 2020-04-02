@@ -166,6 +166,7 @@ class SAGELafConv(MessagePassing):
         seed = 42
         atype = 'frac'
         shared = True
+        fun = 'mean'
         if 'aggr' in kwargs.keys():
             aggr = kwargs['aggr']
         if 'seed' in kwargs.keys():
@@ -177,6 +178,9 @@ class SAGELafConv(MessagePassing):
         if 'shared' in kwargs.keys():
             shared = kwargs['shared']
             del kwargs['shared']
+        if 'fun' in kwargs.keys():
+            fun = kwargs['fun']
+            del kwargs['fun']
 
         super(SAGELafConv, self).__init__(aggr=aggr, **kwargs)
 
@@ -191,11 +195,27 @@ class SAGELafConv(MessagePassing):
             self.register_parameter('bias', None)
 
         self.reset_parameters()
-        if shared:
-            params = torch.rand((13, 1))
-        else:
-            params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
-        #params = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]]).t()
+        #if shared:
+        #    params = torch.rand((13, 1))
+        #else:
+        #    params = torch.Tensor(lhsmdu.sample(13, out_channels, randomSeed=seed))
+        if fun == 'mean':
+            params = torch.Tensor([[1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]]).t()
+        if fun == 'sum':
+            params = torch.Tensor([[1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]]).t()
+        if fun == 'max':
+            params = torch.Tensor([[10, 10, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]]).t()
+        if fun == 'min':
+            params = torch.Tensor([[0, 0, 10, 10, 0, 0, 0, 0, 0, 1, 0, 0, 1]]).t()
+        if fun == 'minmax':
+            params = torch.Tensor([[0, 0, 10, 10, 10, 10, 0, 0, 0, 1, 1, 0, 0]]).t()
+        if fun == 'count':
+            params = torch.Tensor([[1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]]).t()
+        if fun == 'maxmin':
+            params = torch.Tensor([[10, 10, 0, 0, 0, 0, 10, 10, 1, 0, 0, 1, 0]]).t()
+        eps = torch.randint(-1000,1000,(13,1), dtype=torch.float)/100000 
+        params = params + eps
+        print(params)
         if atype == 'minus':
             self.aggregation = ElementAggregationLayer(parameters=params)
         elif atype == 'frac':

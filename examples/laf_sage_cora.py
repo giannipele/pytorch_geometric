@@ -12,16 +12,16 @@ from torch.nn import Linear
 
 
 class GraphSAGE(torch.nn.Module):
-    def __init__(self, dataset, num_layers, hidden, seed):
+    def __init__(self, dataset, num_layers, hidden, seed, fun):
         super(GraphSAGE, self).__init__()
-        #self.conv1 = SAGEConv(dataset.num_features, hidden)
-        self.conv1 = SAGELafConv(dataset.num_features, hidden, seed=seed)
+        #self.conv1 = SAGEConvCorrect(dataset.num_features, hidden)
+        self.conv1 = SAGELafConv(dataset.num_features, hidden, seed=seed, fun=fun)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers - 2):
-            #self.convs.append(SAGEConv(hidden, hidden))
-            self.convs.append(SAGELafConv(hidden, hidden, seed=seed+i+2))
-        self.convn = SAGELafConv(hidden, hidden, seed=seed+num_layers)
-        #self.convn = SAGEConv(hidden, hidden)
+            #self.convs.append(SAGEConvCorrect(hidden, hidden))
+            self.convs.append(SAGELafConv(hidden, hidden, seed=seed+i+2, fun=fun))
+        self.convn = SAGELafConv(hidden, hidden, seed=seed+num_layers, fun=fun)
+        #self.convn = SAGEConvCorrect(hidden, hidden)
         #self.lin1 = Linear(hidden, hidden)
         self.lin2 = Linear(hidden, dataset.num_classes)
 
@@ -50,7 +50,7 @@ class GraphSAGE(torch.nn.Module):
 
 
 EPOCH = 1000
-FOLDS = 5
+FOLDS = 10
 FOLDS_SEED = 196
 
 
@@ -118,7 +118,7 @@ def test(model, data):
     return accs[0]
 
 
-def exp(exp_name, seed, style, shared):
+def exp(exp_name, seed, style, shared, fun):
     torch.manual_seed(seed)
     res_dir = "results/"
 
@@ -153,8 +153,23 @@ def exp(exp_name, seed, style, shared):
             flog.write('validation: {}\n'.format(torch.sum(data.val_mask)))
             flog.write('test: {}\n'.format(torch.sum(data.test_mask)))
 
-            model = GraphSAGE(dataset, num_layers=2, hidden=64, seed=seed + (2*fold)).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0001)
+            model = GraphSAGE(dataset, num_layers=2, hidden=64, seed=seed + (2*fold), fun=fun).to(device)
+            
+            flog.write("Conv1: {}\n".format(list(model.conv1.aggregation.parameters())))
+            i = 2
+            for c in model.convs:
+                flog.write("Conv{}: {}\n".format(i,list(c.aggregation.parameters())))
+                i +=1
+            flog.write("Conv{}: {}\n".format(i, list(model.convn.aggregation.parameters())))
+
+            print("Conv1: {}".format(list(model.conv1.aggregation.parameters())))
+            i = 2
+            for c in model.convs:
+                print("Conv{}: {}".format(i,list(c.aggregation.parameters())))
+                i +=1
+            print("Conv{}: {}".format(i, list(model.convn.aggregation.parameters())))
+
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
             best_acc = 0
             count = 0
             for epoch in range(1, EPOCH):
@@ -172,7 +187,7 @@ def exp(exp_name, seed, style, shared):
                     count = 0
                 else:
                     count += 1
-                if count == 100:
+                if count == 400:
                     break
 
                 itr_time.append(time.time()-start_itr)
@@ -183,6 +198,19 @@ def exp(exp_name, seed, style, shared):
             flog.write(cr+"\n")
             fold_accuracies.append(test_acc)
             fold_f1.append(test_f1)
+            flog.write("Conv1: {}\n".format(list(model.conv1.aggregation.parameters())))
+            i = 2
+            for c in model.convs:
+                flog.write("Conv{}: {}\n".format(i,list(c.aggregation.parameters())))
+                i +=1
+            flog.write("Conv{}: {}\n".format(i, list(model.convn.aggregation.parameters())))
+
+            print("Conv1: {}".format(list(model.conv1.aggregation.parameters())))
+            i = 2
+            for c in model.convs:
+                print("Conv{}: {}".format(i,list(c.aggregation.parameters())))
+                i +=1
+            print("Conv{}: {}".format(i, list(model.convn.aggregation.parameters())))
         flog.write("----------\n")
         flog.write("Avg Test Accuracy: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_accuracies), np.var(fold_accuracies)))
         print("Avg Test Accuracy: {:.5f}\tVariance: {:.5f}\n".format(np.mean(fold_accuracies), np.var(fold_accuracies)))
@@ -200,12 +228,19 @@ def exp(exp_name, seed, style, shared):
 
 def main(exps):
     for e in exps:
-        exp(e['name'], e['seed'], e['style'], e['shared'])
+        exp(e['name'], e['seed'], e['style'], e['shared'], e['fun'])
 
 
 if __name__ == '__main__':
-    exps = [{'name': 'laf_sage_correct', "seed": 3103, "style":'frac', "shared":True},
-             ]
+    exps = [
+            {'name': 'laf_sage_mean', "seed": 104, "style":'frac', "shared":True, "fun": 'mean'},
+            {'name': 'laf_sage_sum', "seed": 104, "style":'frac', "shared":True, "fun": 'sum'},
+            {'name': 'laf_sage_max', "seed": 104, "style":'frac', "shared":True, "fun": 'max'},
+            {'name': 'laf_sage_count', "seed": 104, "style":'frac', "shared":True, "fun": 'count'},
+            {'name': 'laf_sage_minmax', "seed": 104, "style":'frac', "shared":True, "fun": 'minmax'},
+            {'name': 'laf_sage_min', "seed": 104, "style":'frac', "shared":True, "fun": 'min'},
+            {'name': 'laf_sage_maxmin', "seed": 104, "style":'frac', "shared":True, "fun": 'maxmin'},
+            ]
     main(exps)
 
 
