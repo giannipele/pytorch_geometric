@@ -305,7 +305,7 @@ def main(exps):
 
 
 if __name__ == '__main__':
-    exps = [{"name": 'laf_sage_reddit', "dataset_name": 'reddit', "seed": 204, "style": 'frac', "shared": True},
+    exps = [{"name": 'laf_sage_reddit', "dataset_name": 'cora', "seed": 204, "style": 'frac', "shared": True},
              ]
     main(exps)
 
