@@ -3,6 +3,7 @@ import os.path as osp
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch_scatter
 from torch_geometric.datasets import MNISTSuperpixels
 import torch_geometric.transforms as T
 from torch_geometric.data import DataLoader
@@ -52,7 +53,15 @@ class Net(nn.Module):
         x, batch = max_pool_x(cluster, data.x, data.batch)
 
         #x = global_mean_pool(x, batch)
+        x_min = torch_scatter.scatter_min(x, batch, dim=0)[0]
+        gather_idxs = batch.expand(x.shape[1], -1).t()
+        gather_mins = torch.gather(x_min, 0, gather_idxs)
+        s = F.relu(-gather_mins)
+        x = x + s
         x = self.aggregator(x, batch)
+        s_out = self.aggregator(s, batch)
+        x = x - s_out
+
         x = F.elu(self.fc1(x))
         x = F.dropout(x, training=self.training)
         return F.log_softmax(self.fc2(x), dim=1)
